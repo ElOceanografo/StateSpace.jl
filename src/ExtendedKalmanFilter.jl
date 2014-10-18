@@ -25,7 +25,7 @@ function predict(m::NonlinearGaussianSSM, x::GenericMvNormal)
 	return MvNormal(m.f(mean(x)), F * cov(x) * F' + m.V)
 end
 
-function observation(m::NonlinearGaussianSSM, x::GenericMvNormal)
+function observe(m::NonlinearGaussianSSM, x::GenericMvNormal)
 	return MvNormal(m.g(mean(x)), m.W)
 end
 
@@ -60,7 +60,7 @@ function filter{T}(y::Array{T}, m::NonlinearGaussianSSM{T}, x0::GenericMvNormal)
 			x_filtered[i] = x_pred
 		else
 			x_filtered[i] = update(m, x_pred, y[:, i])
-			loglik += log(pdf(observation(m, x_filtered[i]), y[:, i]))
+			loglik += log(pdf(observe(m, x_filtered[i]), y[:, i]))
 		end
 		# this may not be right...double check definition
 		loglik += log(pdf(x_pred, mean(x_filtered[i])))
@@ -73,8 +73,8 @@ function smooth{T}(fs::FilteredState{T})
 end
 
 function simulate(m::NonlinearGaussianSSM, n::Int64, x0::GenericMvNormal)
-	x = zeros(length(x0), n)
-	y = zeros(size(m.G, 1), n)
+	x = zeros(m.m, n)
+	y = zeros(m.n, n)
 	x[:, 1] = rand(MvNormal(m.f(mean(x0)), m.V))
 	y[:, 1] = rand(MvNormal(m.g(x[:, 1]), m.W))
 	for i in 2:n
