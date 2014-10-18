@@ -4,10 +4,11 @@
 
 ## A Julia package for state space modeling
 
+**NOTE: This package is still very much under development and is not fully tested.  Don't use it for anything important yet!**
+
 State space models are a very general type of dynamic statistical model, and have been used to estimate everything from biological populations to the position of Apollo 11 to the weather this weekend.  In a nutshell, they are useful when we want to know the *state* of some process, but we can't observe it directly.  They have two main pieces.  First is the *process model*, which describes probabilistically how the hidden state evolves from one time step to the next.  Second is the *observation model*, which describes, again probabilistically, how the state is translated into the quantities we observe.
 
 These process and observation functions can be linear or nonlinear, and the process noise and observation errors may be Gaussian, or from some other probability distribution.  This package aims to provide methods to perform the common prediction, filtering, and smoothing tasks for each type of model.
-
 
 ### State estimates and predictions as probability distributions
 Julia's type system facilitates an unconventional approach to representing the state estimates.  In most implementations of the Kalman and related filters, the state is tracked as a mean vector, with the covariance served "on the side." This package, on the other hand, tracks the state as a *distribution*, using the excellent [Distributions](https://github.com/JuliaStats/Distributions.jl) package.
@@ -25,13 +26,16 @@ Given a current estimate of the state, where do we expect it to be at the next t
 #### Updating/filtering
 Given a predicted state and a new observation, how do we combine the prediction with the new data to get a better (or optimal) estimate of the state?  This can be done either "on line," i.e. one step at a time as each new measurement arrives, or all at once after all the data have been collected.
 
-`update(model, predicted_state, data)`
-`update!(model, filtered_states, data)`
-`filter(model, data, state0)`
+* `update(model, predicted_state, data)`
+
+* `update!(model, filtered_states, data)`
+
+* `filter(model, data, state0)`
 
 #### Smoothing
 Given a full set of filtered state estimates and a full data set, go back and revise all the estimates to their optimum value, given all the information.  Hindsight is 20/20!
-`smooth(filtered_state)`
+
+* `smooth(filtered_state)`
 
 
 ### Algorithms already implemented:
@@ -47,4 +51,5 @@ Given a full set of filtered state estimates and a full data set, go back and re
 Currently not implemented in this package, though it may be in the future.  `FilteredState` objects contain the model's log-likelihood, which can be used to optimize parameter values.  
 
 [1] Named for [Rudolph E. Kalman](http://en.wikipedia.org/wiki/Rudolf_E._K%C3%A1lm%C3%A1n).
+
 [2] Named for a stick of unscented deodorant.  [No, really](http://www.ieeeghn.org/wiki/index.php/First-Hand:The_Unscented_Transform#What.E2.80.99s_with_the_Name_.E2.80.9CUnscented.E2.80.9D.3F).
