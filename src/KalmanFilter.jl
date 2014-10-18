@@ -91,13 +91,13 @@ function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::GenericMvNormal)
 	return FilteredState(y, x_filtered, loglik)
 end
 
-function smooth{T}(m::LinearGaussianSSM{T}, fs::FilteredState{T})
+function smooth{T}(fs::FilteredState{T})
 	error("Not implemented yet")
 end
 
-function simulate{T}(m::LinearGaussianSSM{T}, n::Int64, x0::GenericMvNormal{T})
-	x = zeros(T, length(x0), n)
-	y = zeros(T, size(m.G, 1), n)
+function simulate(m::LinearGaussianSSM, n::Int64, x0::GenericMvNormal)
+	x = zeros(length(x0), n)
+	y = zeros(size(m.G, 1), n)
 	x[:, 1] = rand(MvNormal(m.F * mean(x0), m.V))
 	y[:, 1] = rand(MvNormal(m.G * x[:, 1], m.W))
 	for i in 2:n
