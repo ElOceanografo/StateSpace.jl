@@ -9,6 +9,7 @@ export
 	FilteredState,
 	show,
 	predict,
+	observe,
 	update,
 	update!,
 	filter,

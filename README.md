@@ -13,7 +13,7 @@ These process and observation functions can be linear or nonlinear, and the proc
 ### State estimates and predictions as probability distributions
 Julia's type system facilitates an unconventional approach to representing the state estimates.  In most implementations of the Kalman and related filters, the state is tracked as a mean vector, with the covariance served "on the side." This package, on the other hand, tracks the state as a *distribution*, using the excellent [Distributions](https://github.com/JuliaStats/Distributions.jl) package.
 
-There are several advantages to this approach.  The code is made shorter and clearer.  Expected values and confidence intervals can be calculated easily using the `mean` and `quantile` methods defined for distributions.  It is easy to generate random draws from state estimates, for instance if you wanted to bootstrap some quantity derived from the state.  Finally, it is just more elegant, and closer to the true meaning of the statistical model.
+There are several advantages to this approach.  The code is made shorter and clearer.  Expected values and confidence intervals can be calculated easily using the methods defined for distributions.  It is easy to generate random draws from state estimates, for instance if you wanted to bootstrap some quantity derived from the state.  Finally, it is just more elegant, and closer to the true meaning of the statistical model.
 
 ### Modeling interface
 There are three basic tasks in state space modeling.  All types of models define the same methods to do them.

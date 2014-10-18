@@ -15,10 +15,15 @@ function show{T}(io::IO, fs::FilteredState{T})
 	println("Log-likelihood: $(fs.loglik)")
 end
 
-function mean{T}(s::FilteredState{T})
-	mu = Array(T, length(s.state_dist[1]), length(s.state_dist))
-	for i in 1:length(s.state_dist)
-		mu[:, i] = mean(s.state_dist[i])
+for op in (:mean, :var, :cov, :cor, :rand)
+	@eval begin
+		function ($op){T}(s::FilteredState{T})
+			result = Array(T, length(s.state_dist[1]), length(s.state_dist))
+			for i in 1:length(s.state_dist)
+				result[:, i] = ($op)(s.state_dist[i])
+			end
+			return result
+		end
 	end
-	return mu
 end
+
