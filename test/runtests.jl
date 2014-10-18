@@ -1,5 +1,7 @@
 using StateSpace
 using Base.Test
 
-# write your own tests here
-@test 1 == 1
+include("test_KF.jl")
+include("test_EKF.jl")
+
+println("Passed all tests.")
