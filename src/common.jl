@@ -1,4 +1,5 @@
 using Distributions
+import Distributions: mean, var, cov, rand
 
 type FilteredState{T, D<:ContinuousMultivariateDistribution}
 	observations::Array{T, 2}
