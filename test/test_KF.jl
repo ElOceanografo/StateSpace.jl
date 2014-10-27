@@ -19,7 +19,7 @@ G = [1.0 0.0 0.5 0.1;
 W = random_cov(2)
 
 m = LinearGaussianSSM(F, V, G, W)
-x0 = MvNormal(randn(4), random_cov(4))
+x0 = MvNormal(randn(4), diagm(ones(4) * 100.0))
 
 x1 = predict(m, x0)
 # println(mean(x1))

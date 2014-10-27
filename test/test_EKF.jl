@@ -13,7 +13,7 @@ W = diagm(ones(3) * 0.1)
 
 
 mod = NonlinearGaussianSSM(f, m, V, g, n, W)
-x0 = MvNormal([1.0, 1.0], random_cov(2))
+x0 = MvNormal([1.0, 1.0], [100.0 0.0; 0.0 100.0])
 
 x1 = predict(mod, x0)
 # println(mean(x1))
