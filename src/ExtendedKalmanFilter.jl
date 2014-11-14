@@ -70,7 +70,7 @@ end
 
 
 function observe{T}(m::NonlinearGaussianSSM{T}, x::GenericMvNormal)
-	return MvNormal(m.g(rand(x)), m.W)
+	return MvNormal(m.g(rand(x)), m.G * cov(x) * m.G' + m.W)
 end
 
 function simulate{T}(m::NonlinearGaussianSSM{T}, n::Int64, x0::GenericMvNormal)

@@ -50,7 +50,7 @@ function predict(m::LinearGaussianSSM, x::GenericMvNormal)
 end
 
 function observe(m::LinearGaussianSSM, x::GenericMvNormal)
-	return MvNormal(m.G * mean(x), m.W)
+	return MvNormal(m.G * mean(x), m.G * cov(x) * m.G' + m.W)
 end
 
 function update(m::LinearGaussianSSM, pred::GenericMvNormal, y)
