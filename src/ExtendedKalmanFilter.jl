@@ -20,12 +20,12 @@ end
 
 
 ## Core methods
-function predict{T}(m::NonlinearGaussianSSM{T}, x::GenericMvNormal)
+function predict{T}(m::NonlinearGaussianSSM{T}, x::AbstractMvNormal)
 	F = m.fjac(mean(x))
 	return MvNormal(m.f(mean(x)), F * cov(x) * F' + m.V)
 end
 
-function update{T}(m::NonlinearGaussianSSM{T}, pred::GenericMvNormal, y::Array{T})
+function update{T}(m::NonlinearGaussianSSM{T}, pred::AbstractMvNormal, y::Array{T})
 	G = m.gjac(mean(pred))
 	innovation = y - G * mean(pred)
 	innovation_cov = G * cov(pred) * G' + m.W
@@ -44,8 +44,8 @@ function update!{T}(m::NonlinearGaussianSSM{T}, fs::FilteredState, y::Array{T})
 end
 
 
-function filter{T}(y::Array{T}, m::NonlinearGaussianSSM{T}, x0::GenericMvNormal)
-	x_filtered = Array(GenericMvNormal, size(y, 2))
+function filter{T}(y::Array{T}, m::NonlinearGaussianSSM{T}, x0::AbstractMvNormal)
+	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0
 	x_pred = predict(m, x0)
 	x_filtered[1] = update(m, x_pred, y[:, 1])
@@ -69,12 +69,12 @@ function smooth{T}(fs::FilteredState{T})
 end
 
 
-function observe{T}(m::NonlinearGaussianSSM{T}, x::GenericMvNormal)
+function observe{T}(m::NonlinearGaussianSSM{T}, x::AbstractMvNormal)
 	G = m.gjac(mean(x))
 	return MvNormal(m.g(rand(x)), G * cov(x) * G' + m.W)
 end
 
-function simulate{T}(m::NonlinearGaussianSSM{T}, n::Int64, x0::GenericMvNormal)
+function simulate{T}(m::NonlinearGaussianSSM{T}, n::Int64, x0::AbstractMvNormal)
 	x = zeros(m.m, n)
 	y = zeros(m.n, n)
 	x[:, 1] = rand(MvNormal(m.f(mean(x0)), m.V))

@@ -1,3 +1,4 @@
+using Distributions
 
 issquare(x::Matrix) = size(x, 1) == size(x, 2)
 
@@ -45,15 +46,15 @@ function LinearGaussianSSM{T<:Real}(F::Matrix{T}, V::Matrix{T}, G::Matrix{T}, W:
 end
 
 ## Core methods
-function predict(m::LinearGaussianSSM, x::GenericMvNormal)
+function predict(m::LinearGaussianSSM, x::AbstractMvNormal)
 	return MvNormal(m.F * mean(x), m.F * cov(x) * m.F' + m.V)
 end
 
-function observe(m::LinearGaussianSSM, x::GenericMvNormal)
+function observe(m::LinearGaussianSSM, x::AbstractMvNormal)
 	return MvNormal(m.G * mean(x), m.G * cov(x) * m.G' + m.W)
 end
 
-function update(m::LinearGaussianSSM, pred::GenericMvNormal, y)
+function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y)
 	innovation = y - m.G * mean(pred)
 	innovation_cov = m.G * cov(pred) * m.G' + m.W
 	K = cov(pred) * m.G' * inv(innovation_cov)
@@ -71,8 +72,8 @@ function update!(m::LinearGaussianSSM, fs::FilteredState, y)
 end
 
 
-function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::GenericMvNormal)
-	x_filtered = Array(GenericMvNormal, size(y, 2))
+function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::AbstractMvNormal)
+	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0
 	x_pred = predict(m, x0)
 	x_filtered[1] = update(m, x_pred, y[:, 1])
@@ -95,7 +96,7 @@ function smooth{T}(m::LinearGaussianSSM{T}, fs::FilteredState{T})
 	error("Not implemented yet")
 end
 
-function simulate{T}(m::LinearGaussianSSM{T}, n::Int64, x0::GenericMvNormal)
+function simulate{T}(m::LinearGaussianSSM{T}, n::Int64, x0::AbstractMvNormal)
 	x = zeros(T, length(x0), n)
 	y = zeros(T, size(m.G, 1), n)
 	x[:, 1] = rand(MvNormal(m.F * mean(x0), m.V))
