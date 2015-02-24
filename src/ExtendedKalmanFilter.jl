@@ -1,6 +1,6 @@
 using ForwardDiff
 
-type NonlinearGaussianSSM{T}
+type NonlinearGaussianSSM{T} <: AbstractStateSpaceModel
 	f::Function # actual process function
 	m::Int64
 	fjac::Function # function returning Jacobian of process

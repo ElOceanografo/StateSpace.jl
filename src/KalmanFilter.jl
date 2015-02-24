@@ -2,7 +2,7 @@ using Distributions
 
 issquare(x::Matrix) = size(x, 1) == size(x, 2)
 
-type LinearGaussianSSM{T}
+type LinearGaussianSSM{T} <: AbstractStateSpaceModel
 	F::Matrix{T}
 	V::Matrix{T}
 	G::Matrix{T}

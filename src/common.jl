@@ -1,6 +1,9 @@
 using Distributions
 import Distributions: mean, var, cov, rand
 
+abstract AbstractStateSpaceModel
+typealias AbstractSSM AbstractStateSpaceModel
+
 type FilteredState{T, D<:ContinuousMultivariateDistribution}
 	observations::Array{T, 2}
 	state_dist::Array{D}
