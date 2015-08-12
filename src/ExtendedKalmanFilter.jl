@@ -36,9 +36,9 @@ function update{T}(m::NonlinearGaussianSSM{T}, pred::AbstractMvNormal, y::Array{
 end
 
 function update!{T}(m::NonlinearGaussianSSM{T}, fs::FilteredState, y::Array{T})
-	x_pred = predict(m, fs.state_dist[end])
+	x_pred = predict(m, fs.state[end])
 	x_filt = update(m, x_pred, y)
-	push!(fs.state_dist, x_filt)
+	push!(fs.state, x_filt)
 	fs.observations = [fs.observations y]
 	return fs
 end
@@ -64,10 +64,26 @@ function filter{T}(y::Array{T}, m::NonlinearGaussianSSM{T}, x0::AbstractMvNormal
 	return FilteredState(y, x_filtered, loglik)
 end
 
-function smooth{T}(fs::FilteredState{T})
-	error("Not implemented yet")
-end
-
+# function smooth{T}(m::NonlinearGaussianSSM{T}, fs::FilteredState{T})
+# 	n = size(fs.observations, 2)
+# 	smooth_dist = Array(AbstractMvNormal, n)
+# 	smooth_dist[end] = fs.state[end]
+# 	loglik = logpdf(observe(m, smooth_dist[end]), fs.observations[:, end])
+# 	for i in (n - 1):-1:1
+# 		state_pred = predict(m, fs.state[i])
+# 		P = cov(fs.state[i])
+# 		J = P * m.F' * inv(cov(state_pred))
+# 		x_smooth = mean(fs.state[i]) + J * 
+# 			(mean(smooth_dist[i+1]) - mean(state_pred))
+# 		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
+# 		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
+# 		loglik += logpdf(predict(m, smooth_dist[i]), mean(smooth_dist[i+1]))
+# 		if ! any(isnan(fs.observations[:, i]))
+# 			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
+# 		end
+# 	end
+# 	return SmoothedState(fs.observations, smooth_dist, loglik)
+# end
 
 function observe{T}(m::NonlinearGaussianSSM{T}, x::AbstractMvNormal)
 	G = m.gjac(mean(x))
