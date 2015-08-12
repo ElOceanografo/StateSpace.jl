@@ -1,6 +1,7 @@
 module StateSpace
 
 import Base: mean, filter, show
+import StatsBase: loglikelihood
 
 
 export
@@ -13,6 +14,8 @@ export
 	update,
 	update!,
 	filter,
+	smooth,
+	loglikelihood,
 	simulate
 
 include("common.jl")

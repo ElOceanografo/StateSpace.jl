@@ -37,7 +37,7 @@ yy[1, 50] = NaN  # throw in a missing value
 # readline()
 
 fs = filter(yy, m, x0)
-# print(fs)
+print(fs)
 
 # plot(xx', "k")
 # plot(mean(fs)', "r")
@@ -45,5 +45,11 @@ fs = filter(yy, m, x0)
 
 y_new = fs.observations[:, end] + randn(2) / 10
 update!(m, fs, y_new)
+
+ss = smooth(m, fs)
+
+
+@assert loglikelihood(fs) < loglikelihood(ss)
+
 
 println("KalmanFilter.jl passed.\n")

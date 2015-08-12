@@ -64,9 +64,9 @@ function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y)
 end
 
 function update!(m::LinearGaussianSSM, fs::FilteredState, y)
-	x_pred = predict(m, fs.state_dist[end])
+	x_pred = predict(m, fs.state[end])
 	x_filt = update(m, x_pred, y)
-	push!(fs.state_dist, x_filt)
+	push!(fs.state, x_filt)
 	fs.observations = [fs.observations y]
 	return fs
 end
@@ -74,7 +74,7 @@ end
 
 function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::AbstractMvNormal)
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
-	loglik = 0
+	loglik = 0.0
 	x_pred = predict(m, x0)
 	x_filtered[1] = update(m, x_pred, y[:, 1])
 	for i in 2:size(y, 2)
@@ -84,17 +84,35 @@ function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::AbstractMvNormal)
 			x_filtered[i] = x_pred
 		else
 			x_filtered[i] = update(m, x_pred, y[:, i])
-			loglik += log(pdf(observe(m, x_filtered[i]), y[:, i]))
+			loglik += logpdf(observe(m, x_filtered[i]), y[:, i])
 		end
 		# this may not be right...double check definition
-		loglik += log(pdf(x_pred, mean(x_filtered[i])))
+		loglik += logpdf(x_pred, mean(x_filtered[i]))
 	end
 	return FilteredState(y, x_filtered, loglik)
 end
 
 function smooth{T}(m::LinearGaussianSSM{T}, fs::FilteredState{T})
-	error("Not implemented yet")
+	n = size(fs.observations, 2)
+	smooth_dist = Array(AbstractMvNormal, n)
+	smooth_dist[end] = fs.state[end]
+	loglik = logpdf(observe(m, smooth_dist[end]), fs.observations[:, end])
+	for i in (n - 1):-1:1
+		state_pred = predict(m, fs.state[i])
+		P = cov(fs.state[i])
+		J = P * m.F' * inv(cov(state_pred))
+		x_smooth = mean(fs.state[i]) + J * 
+			(mean(smooth_dist[i+1]) - mean(state_pred))
+		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
+		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
+		loglik += logpdf(predict(m, smooth_dist[i]), mean(smooth_dist[i+1]))
+		if ! any(isnan(fs.observations[:, i]))
+			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
+		end
+	end
+	return SmoothedState(fs.observations, smooth_dist, loglik)
 end
+
 
 function simulate{T}(m::LinearGaussianSSM{T}, n::Int64, x0::AbstractMvNormal)
 	x = zeros(T, length(x0), n)
