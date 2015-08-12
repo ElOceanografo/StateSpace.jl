@@ -59,5 +59,9 @@ fs = filter(yy, mod, x0)
 y_new = fs.observations[:, end] + randn(mod.n) / 10
 update!(mod, fs, y_new)
 
+ss = smooth(mod, fs)
+
+@assert loglikelihood(fs) < loglikelihood(ss)
+
 
 println("ExtendedKalmanFilter.jl passed.\n")
