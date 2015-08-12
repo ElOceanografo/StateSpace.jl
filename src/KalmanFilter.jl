@@ -77,6 +77,8 @@ function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::AbstractMvNormal)
 	loglik = 0.0
 	x_pred = predict(m, x0)
 	x_filtered[1] = update(m, x_pred, y[:, 1])
+	loglik = logpdf(x_filtered[1], mean(x_pred)) + 
+		logpdf(observe(m, x_filtered[1]), y[:,1])
 	for i in 2:size(y, 2)
 		x_pred = predict(m, x_filtered[i-1])
 		# Check for missing values in observation
@@ -86,7 +88,6 @@ function filter{T}(y::Array{T}, m::LinearGaussianSSM{T}, x0::AbstractMvNormal)
 			x_filtered[i] = update(m, x_pred, y[:, i])
 			loglik += logpdf(observe(m, x_filtered[i]), y[:, i])
 		end
-		# this may not be right...double check definition
 		loglik += logpdf(x_pred, mean(x_filtered[i]))
 	end
 	return FilteredState(y, x_filtered, loglik)

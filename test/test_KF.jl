@@ -37,7 +37,7 @@ yy[1, 50] = NaN  # throw in a missing value
 # readline()
 
 fs = filter(yy, m, x0)
-print(fs)
+# print(fs)
 
 # plot(xx', "k")
 # plot(mean(fs)', "r")
