@@ -5,10 +5,15 @@ import StatsBase: loglikelihood
 
 
 export
+	AbstractStateSpaceModel,
+	AbstractSSM,
+	AbstractGaussianSSM,
 	LinearGaussianSSM,
 	NonlinearGaussianSSM,
 	FilteredState,
 	show,
+	process_matrix,
+	observation_matrix,
 	predict,
 	observe,
 	update,
