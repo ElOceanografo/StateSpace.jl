@@ -1,6 +1,6 @@
 using ForwardDiff
 
-type NonlinearGaussianSSM{T} <: AbstractStateSpaceModel
+type NonlinearGaussianSSM{T} <: AbstractGaussianSSM
 	f::Function # actual process function
 	m::Int64
 	fjac::Function # function returning Jacobian of process
@@ -20,86 +20,7 @@ end
 
 
 ## Core methods
-function predict{T}(m::NonlinearGaussianSSM{T}, x::AbstractMvNormal)
-	F = m.fjac(mean(x))
-	return MvNormal(m.f(mean(x)), F * cov(x) * F' + m.V)
-end
-
-function update{T}(m::NonlinearGaussianSSM{T}, pred::AbstractMvNormal, y::Array{T})
-	G = m.gjac(mean(pred))
-	innovation = y - G * mean(pred)
-	innovation_cov = G * cov(pred) * G' + m.W
-	K = cov(pred) * G' * inv(innovation_cov)
-	mean_update = mean(pred) + K * innovation
-	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
-	return MvNormal(mean_update, cov_update)
-end
-
-function update!{T}(m::NonlinearGaussianSSM{T}, fs::FilteredState, y::Array{T})
-	x_pred = predict(m, fs.state[end])
-	x_filt = update(m, x_pred, y)
-	push!(fs.state, x_filt)
-	fs.observations = [fs.observations y]
-	return fs
-end
-
-function filter{T}(y::Array{T}, m::NonlinearGaussianSSM{T}, x0::AbstractMvNormal)
-	x_filtered = Array(AbstractMvNormal, size(y, 2))
-	loglik = 0
-	x_pred = predict(m, x0)
-	x_filtered[1] = update(m, x_pred, y[:, 1])
-	for i in 2:size(y, 2)
-		x_pred = predict(m, x_filtered[i-1])
-		# Check for missing values in observation
-		if any(isnan(y[:, i]))
-			x_filtered[i] = x_pred
-		else
-			x_filtered[i] = update(m, x_pred, y[:, i])
-			loglik += log(pdf(observe(m, x_filtered[i]), y[:, i]))
-		end
-		# this may not be right...double check definition
-		loglik += log(pdf(x_pred, mean(x_filtered[i])))
-	end
-	return FilteredState(y, x_filtered, loglik)
-end
-
-function smooth{T}(m::NonlinearGaussianSSM{T}, fs::FilteredState{T})
-	n = size(fs.observations, 2)
-	smooth_dist = Array(AbstractMvNormal, n)
-	smooth_dist[end] = fs.state[end]
-	loglik = logpdf(observe(m, smooth_dist[end]), fs.observations[:, end])
-	for i in (n - 1):-1:1
-		state_pred = predict(m, fs.state[i])
-		P = cov(fs.state[i])
-		F = m.fjac(mean(fs.state[i+1]))
-		J = P * F' * inv(cov(state_pred))
-		x_smooth = mean(fs.state[i]) + J * 
-			(mean(smooth_dist[i+1]) - mean(state_pred))
-		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
-		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
-		loglik += logpdf(predict(m, smooth_dist[i]), mean(smooth_dist[i+1]))
-		if ! any(isnan(fs.observations[:, i]))
-			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
-		end
-	end
-	return SmoothedState(fs.observations, smooth_dist, loglik)
-end
-
-
-
-function observe{T}(m::NonlinearGaussianSSM{T}, x::AbstractMvNormal)
-	G = m.gjac(mean(x))
-	return MvNormal(m.g(rand(x)), G * cov(x) * G' + m.W)
-end
-
-function simulate{T}(m::NonlinearGaussianSSM{T}, n::Int64, x0::AbstractMvNormal)
-	x = zeros(m.m, n)
-	y = zeros(m.n, n)
-	x[:, 1] = rand(MvNormal(m.f(mean(x0)), m.V))
-	y[:, 1] = rand(MvNormal(m.g(x[:, 1]), m.W))
-	for i in 2:n
-		x[:, i] = rand(MvNormal(m.f(x[:, i-1]), m.V))
-		y[:, i] = rand(MvNormal(m.g(x[:, i]), m.W))
-	end
-	return (x, y)
-end
+process_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal) = m.fjac(mean(x))
+process_matrix(m::NonlinearGaussianSSM, x::Vector) = m.fjac(x)
+observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal) = m.gjac(mean(x))
+observation_matrix(m::NonlinearGaussianSSM, x::Vector) = m.gjac(x)
