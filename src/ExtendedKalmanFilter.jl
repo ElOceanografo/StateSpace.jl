@@ -11,8 +11,8 @@ end
 
 function NonlinearGaussianSSM{T}(f::Function, V::Matrix{T}, 
 		g::Function, W::Matrix{T})
-	fjac = forwarddiff_jacobian(f, T, fadtype=:typed)
-	gjac = forwarddiff_jacobian(g, T, fadtype=:typed)
+	fjac = jacobian(f, mutates=false)
+	gjac = jacobian(g, mutates=false)
 	return NonlinearGaussianSSM{T}(f, fjac, V, g, gjac, W)
 end
 
