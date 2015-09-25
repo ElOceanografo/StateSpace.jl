@@ -80,7 +80,7 @@ function filter{T}(y::Array{T}, m::AbstractGaussianSSM, x0::AbstractMvNormal)
 	loglik = 0.0
 	x_pred = predict(m, x0)
 	x_filtered[1] = update(m, x_pred, y[:, 1])
-	loglik = logpdf(x_filtered[1], mean(x_pred)) + 
+	loglik = logpdf(x_filtered[1], mean(x_pred)) +
 		logpdf(observe(m, x_filtered[1]), y[:,1])
 	for i in 2:size(y, 2)
 		x_pred = predict(m, x_filtered[i-1])
@@ -106,7 +106,7 @@ function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 		P = cov(fs.state[i])
 		F = process_matrix(m, fs.state[i])
 		J = P * F' * inv(cov(state_pred))
-		x_smooth = mean(fs.state[i]) + J * 
+		x_smooth = mean(fs.state[i]) + J *
 			(mean(smooth_dist[i+1]) - mean(state_pred))
 		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
 		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
