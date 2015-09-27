@@ -5,6 +5,17 @@ abstract AbstractStateSpaceModel
 typealias AbstractSSM AbstractStateSpaceModel
 abstract AbstractGaussianSSM <: AbstractStateSpaceModel
 
+"""
+Data structure representing the estimated state of a state-space model
+after filtering/smoothing.
+
+#### Fields
+- observations : Array of observations. Each column is  a single observation vector.
+- state : Array of (possibly multivariate) Distributions. Each distribution
+represents the estimate and uncertainty of the hidden state at that time.
+- loglik : The log-likelihood of the model, i.e. the probabilty of the observations
+given the model and state estimates.
+"""
 type FilteredState{T, D<:ContinuousMultivariateDistribution}
 	observations::Array{T, 2}
 	state::Array{D}
@@ -31,6 +42,9 @@ function show{T}(io::IO, fs::SmoothedState{T})
 	println("Log-likelihood: $(fs.loglik)")
 end
 
+"""
+Returns the log-likelihood of the FilteredState object.
+"""
 loglikelihood(fs::FilteredState) = fs.loglik
 
 for op in (:mean, :var, :cov, :cor, :rand)
@@ -45,17 +59,49 @@ for op in (:mean, :var, :cov, :cor, :rand)
 	end
 end
 
+"""
+Forecast the state of the process at the next time step.
 
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- x : AbstractMvNormal.  Current state estimate.
+
+#### Returns
+- MvNormal distribution representing the forecast and its associated uncertainty.
+"""
 function predict(m::AbstractGaussianSSM, x::AbstractMvNormal)
 	F = process_matrix(m, x)
 	return MvNormal(F * mean(x), F * cov(x) * F' + m.V)
 end
 
+"""
+Observe the state process with uncertainty.
+
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- x : AbstractMvNormal.  Current state estimate.
+
+#### Returns
+- MvNormal distribution, representing the probability of recording any
+particular observation data.
+"""
 function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
 	G = observation_matrix(m, x)
 	return MvNormal(G * mean(x), G * cov(x) * G' + m.W)
 end
 
+"""
+Refine a forecast state based on a new observation.
+
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- pred : AbstractMvNormal.  Estimate of state at time t, given data up to t-1.
+- y : Vector of the latest observation at time t.
+
+#### Returns
+- MvNormal distribution, representing the estimate of the state at time t given 
+all data up to t.
+"""
 function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y)
 	G = observation_matrix(m, pred)
 	innovation = y - G * mean(pred)
@@ -66,6 +112,20 @@ function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y)
 	return MvNormal(mean_update, cov_update)
 end
 
+
+"""
+Extend a FilteredState 'on-line' when a new observation becomes available.
+This function enlarges the FilteredState, so may not be a good choice for
+applications where many new observations have to be assimilated very fast.
+
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- fs : A FilteredState object.
+- y : Vector of the latest observation at time t.
+
+#### Returns
+- fs : The FilteredState, extended with one more observation and state estimate.
+"""
 function update!(m::AbstractGaussianSSM, fs::FilteredState, y)
 	x_pred = predict(m, fs.state[end])
 	x_filt = update(m, x_pred, y)
@@ -74,8 +134,27 @@ function update!(m::AbstractGaussianSSM, fs::FilteredState, y)
 	return fs
 end
 
+"""
+Given a process/observation model and a set of data, estimate the states of the
+hidden process at each time step.  
 
-function filter{T}(y::Array{T}, m::AbstractGaussianSSM, x0::AbstractMvNormal)
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- y : Array of data.  Each column is a set of observations at one time, while
+each row is one observed variable.  Can contain NaNs to represent missing data.
+- x0 : AbstractMvNorm. Multivariate normal distribution representing our estimate
+of the hidden state and our uncertainty about that estimate before our first observation.
+(i.e., if the first data arrives at t=1, this is where we think the process is at t=0.)
+
+#### Returns
+- A FilteredState object holding the estimates of the hidden state.
+
+#### Notes
+This function only does forward-pass filtering--that is, the state estimate at time
+t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
+filtering, run `smooth` on the FilteredState produced by this function.
+"""
+function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal)
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0.0
 	x_pred = predict(m, x0)
@@ -96,6 +175,16 @@ function filter{T}(y::Array{T}, m::AbstractGaussianSSM, x0::AbstractMvNormal)
 	return FilteredState(y, x_filtered, loglik)
 end
 
+"""
+Given a process/observation model and a set of data, estimate the states of the
+hidden process at each time step using forward and backward passes.
+
+This function has two methods.  It can take either an AbstractGaussianSSM and a the
+FilteredState produced by a previous call to `filter`, or it can take a model, data,
+set, and initial state estimate, in which case it does the forward and backward 
+passes at once.
+
+"""
 function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	n = size(fs.observations, 2)
 	smooth_dist = Array(AbstractMvNormal, n)
@@ -118,7 +207,21 @@ function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	return SmoothedState(fs.observations, smooth_dist, loglik)
 end
 
+function smooth{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal)
+	fs = filter(m, y, x0)
+	return smooth(m, fs)
+end
 
+"""
+Simulate a realization of a state-space process and observations of it.
+
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- x0 : AbstractMvNorm. Distribution of the state process's starting value.
+
+#### Returns
+- (x, y) : Tuple of the process and observation arrays.
+"""
 function simulate(m::AbstractGaussianSSM, n::Int64, x0::AbstractMvNormal)
 	F = process_matrix(m, x0)
 	G = observation_matrix(m, x0)

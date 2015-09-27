@@ -42,7 +42,7 @@ yy[1, 50] = NaN
 # title("Observations")
 # readline()
 
-fs = filter(yy, mod, x0)
+fs = filter(mod, yy, x0)
 
 # figure()
 # for i in 1:2
