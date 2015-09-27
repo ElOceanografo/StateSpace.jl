@@ -14,15 +14,13 @@ function f(x)
 	 x[2] .* exp(r2 * (1 - (x[2] ./ K2)))]
 end
 
-m = 2 								# dimension of latent state
 V = diagm([3000.0, 5000.0]) 		# covariance of (additive) process noise
 
 # Define observation model
 g(x) = 0.01 .* x
-n = 2
 W = diagm([100.0, 250.0])
 
-mod = NonlinearGaussianSSM(f, m, V, g, n, W)
+mod = NonlinearGaussianSSM(f, V, g, W)
 x0 = MvNormal([1000.0, 500.0], [100.0 0.0; 0.0 100.0])
 
 x1 = predict(mod, x0)
@@ -56,7 +54,7 @@ fs = filter(yy, mod, x0)
 # end
 # readline()
 
-y_new = fs.observations[:, end] + randn(mod.n) / 10
+y_new = fs.observations[:, end] + randn(size(mod.V, 1)) / 10
 update!(mod, fs, y_new)
 
 ss = smooth(mod, fs)
