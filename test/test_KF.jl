@@ -36,7 +36,7 @@ yy[1, 50] = NaN  # throw in a missing value
 # plot(yy', "r")
 # readline()
 
-fs = filter(yy, m, x0)
+fs = filter(m, yy, x0)
 # print(fs)
 
 # plot(xx', "k")
