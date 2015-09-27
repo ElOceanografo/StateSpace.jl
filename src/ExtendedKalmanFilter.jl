@@ -11,8 +11,8 @@ end
 
 function NonlinearGaussianSSM{T}(f::Function, V::Matrix{T}, 
 		g::Function, W::Matrix{T})
-	fjac = jacobian(f, mutates=false)
-	gjac = jacobian(g, mutates=false)
+	fjac = jacobian(f)
+	gjac = jacobian(g)
 	return NonlinearGaussianSSM{T}(f, fjac, V, g, gjac, W)
 end
 

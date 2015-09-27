@@ -237,3 +237,17 @@ function simulate(m::AbstractGaussianSSM, n::Int64, x0::AbstractMvNormal)
 	end
 	return (x, y)
 end
+
+"""
+Fit a state-space model to data using maximum likelihood.
+
+
+"""
+function fit(build_func, y, x0, params0, args...)
+	
+	function objective(params)
+		ssm = build_func(params)
+		return -loglikelihood(smooth(m, y, x0))
+	end
+	fit = optimize(objective, params0, args...)
+end
