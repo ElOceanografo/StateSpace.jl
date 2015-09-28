@@ -86,7 +86,7 @@ initial_guess = MvNormal([3.0], [1.0])
 #-------------------------------------------------------------------------------
 #Now that we have some noisy observations, the Kalman filter parameters and an
 #intial guess for the state of the system, we can run the Kalman Filter
-filtered_state = filter(observations, linSSM, initial_guess)
+filtered_state = filter(linSSM, observations, initial_guess)
 #End Section: Execute Kalman Filter
 ################################################################################
 
