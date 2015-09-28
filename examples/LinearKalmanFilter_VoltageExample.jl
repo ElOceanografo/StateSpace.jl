@@ -101,7 +101,7 @@ x_data = 1:number_of_observations
 state_array = Vector{Float64}(number_of_observations+1)
 confidence_array = Vector{Float64}(number_of_observations+1)
 state_array[1] = initial_guess.μ[1]
-confidence_array[1] = initial_guess.Σ.diag[1]
+confidence_array[1] = 2*sqrt(initial_guess.Σ.diag[1])
 for i in x_data
     current_state = filtered_state.state[i]
     state_array[i+1] = current_state.μ[1]
