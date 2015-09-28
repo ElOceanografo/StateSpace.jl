@@ -27,7 +27,7 @@ p0 = 0.1 * k # p0 is the initial population
 function logisticGrowth(r, p, k, t)
     k * p * exp(r*t) / (k + p * (exp(r*t) - 1))
 end
-#logisticGrowth(state) = logisticGrowth(state[1], state[2], k, Δt)
+logisticGrowth(state) = logisticGrowth(state[1], state[2], k, Δt)
 
 #Set the measurement noise variance
 measurement_noise_variance = 25.0
@@ -59,9 +59,9 @@ measurements = [growth_rate_measurements population_measurements]'
 #assume that the growth rate is constant throughout time. And we'll assume that
 #the population update follows the logistic growth pattern. So let's create that
 #process function
-function process_fcn(state, k, Δt)
+function process_fcn(state)
     predict_growth_rate = state[1]
-    predict_population = logisticGrowth(state[1], state[2], k, Δt)
+    predict_population = logisticGrowth(state)
     new_state = [predict_growth_rate, predict_population]
     return new_state
 end
@@ -114,7 +114,7 @@ x_data = 1:numObs
 population_array = Vector{Float64}(numObs+1)
 confidence_array = Vector{Float64}(numObs+1)
 population_array[1] = initial_guess.μ[2]
-confidence_array[1] = initial_guess.Σ.mat[2,2]
+confidence_array[1] = 2*sqrt(initial_guess.Σ.mat[2,2])
 for i in x_data
     current_state = filtered_state.state[i]
     population_array[i+1] = current_state.μ[2]
