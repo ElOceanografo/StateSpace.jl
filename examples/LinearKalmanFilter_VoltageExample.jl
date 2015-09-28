@@ -130,8 +130,6 @@ filtered_state_plot = plot(
     Guide.title("Linear Kalman Filter Example")
     )
 display(filtered_state_plot)
-plot_location = "C:\\Users\\jonathan\\Documents\\UniOfOxford\\DPhilWork\\FilterTesting\\KalmanFilter\\plots"
-filtered_plot_name = "filtered.png"
 #End Section: Plot Filtered results
 ################################################################################
 
@@ -168,12 +166,6 @@ df_ss = DataFrame(
     f = "Filtered values"
     )
 
-n = 3
-getColors = distinguishable_colors(n, Color[LCHab(70, 60, 240)],
-                                   transform=c -> deuteranopic(c, 0.5),
-                                   lchoices=Float64[65, 70, 75, 80],
-                                   cchoices=Float64[0, 50, 60, 70],
-                                   hchoices=linspace(0, 330, 24))
 smoothed_state_plot = plot(
     layer(x=x_data, y=smoothed_state.observations, Geom.point, Theme(default_color=getColors[2])),
     layer(x=x_data, y=ones(number_of_observations)*true_voltage, Geom.line, Theme(default_color=getColors[3])),
@@ -183,6 +175,5 @@ smoothed_state_plot = plot(
     Guide.title("Linear Kalman Smoother Example")
     )
 display(smoothed_state_plot)
-smoothed_plot_name = "smoothed.png"
 #End Section: Plot Filtered results
 ################################################################################
