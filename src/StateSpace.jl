@@ -9,6 +9,7 @@ export
 	AbstractSSM,
 	AbstractGaussianSSM,
 	LinearGaussianSSM,
+	LinearGaussianCISSM,
 	NonlinearGaussianSSM,
 	FilteredState,
 	show,

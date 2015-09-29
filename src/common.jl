@@ -4,6 +4,7 @@ import Distributions: mean, var, cov, rand
 abstract AbstractStateSpaceModel
 typealias AbstractSSM AbstractStateSpaceModel
 abstract AbstractGaussianSSM <: AbstractStateSpaceModel
+abstract AbstractLinearGaussian <: AbstractGaussianSSM
 
 """
 Data structure representing the estimated state of a state-space model
