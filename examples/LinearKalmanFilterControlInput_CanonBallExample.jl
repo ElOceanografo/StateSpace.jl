@@ -16,7 +16,6 @@
 #Let's import the modules required to execute the Kalman Filter
 using StateSpace
 using Distributions
-using DataFrames
 using Gadfly
 using Colors
 
