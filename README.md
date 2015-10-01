@@ -20,7 +20,7 @@ There are several advantages to this approach. The code is made shorter and clea
 
 ### Usage
 
-There are several [examples](https://github.com/JonnyCBB/StateSpace.jl/tree/master/examples) to see how the StateSpace.jl package can be used. Each example has a **commented script and an IJulia notebook document** to describe the model and also how to set up and solve the problem. An overview of all examples can be found in the [examples README](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/README_examples.md).
+There are several [examples](https://github.com/JonnyCBB/StateSpace.jl/tree/master/examples) to see how the StateSpace.jl package can be used. **Each example has a commented script and an IJulia notebook document** to describe the model and also how to set up and solve the problem. An overview of all examples can be found in the [examples README](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/README_examples.md).
 ```julia
 using StateSpace
 using Distributions
@@ -31,9 +31,9 @@ noObs = 60
 obs = trueVal + randn(noObs) * sqrt(0.1)
 
 #Define process and observation model
-pm = 1.0     # process matrix
+pm = 1.0     # process model parameter
 pc = 0.00001 # process variance
-om = 1.0     # observation matrix
+om = 1.0     # observation model parameter
 oc = 0.1     # observation variance
 linSSM = LinearGaussianSSM(pm, pc, om, oc) #create linear State space model object
 
