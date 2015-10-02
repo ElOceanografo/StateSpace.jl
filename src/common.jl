@@ -4,6 +4,7 @@ import Distributions: mean, var, cov, rand
 abstract AbstractStateSpaceModel
 typealias AbstractSSM AbstractStateSpaceModel
 abstract AbstractGaussianSSM <: AbstractStateSpaceModel
+abstract AbstractLinearGaussian <: AbstractGaussianSSM
 
 """
 Data structure representing the estimated state of a state-space model
@@ -99,7 +100,7 @@ Refine a forecast state based on a new observation.
 - y : Vector of the latest observation at time t.
 
 #### Returns
-- MvNormal distribution, representing the estimate of the state at time t given 
+- MvNormal distribution, representing the estimate of the state at time t given
 all data up to t.
 """
 function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y)
@@ -136,7 +137,7 @@ end
 
 """
 Given a process/observation model and a set of data, estimate the states of the
-hidden process at each time step.  
+hidden process at each time step.
 
 #### Parameters
 - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
@@ -181,7 +182,7 @@ hidden process at each time step using forward and backward passes.
 
 This function has two methods.  It can take either an AbstractGaussianSSM and a the
 FilteredState produced by a previous call to `filter`, or it can take a model, data,
-set, and initial state estimate, in which case it does the forward and backward 
+set, and initial state estimate, in which case it does the forward and backward
 passes at once.
 
 """
@@ -244,7 +245,7 @@ Fit a state-space model to data using maximum likelihood.
 
 """
 function fit(build_func, y, x0, params0, args...)
-	
+
 	function objective(params)
 		ssm = build_func(params)
 		return -loglikelihood(smooth(m, y, x0))
