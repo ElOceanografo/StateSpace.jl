@@ -1,3 +1,5 @@
+# Example from http://folk.ntnu.no/bjarnean/pubs/journals/journal-47.pdf
+
 #Here we import the required modules
 using StateSpace
 using Distributions
