@@ -8,6 +8,7 @@ export
 	AbstractStateSpaceModel,
 	AbstractSSM,
 	AbstractGaussianSSM,
+    AdditiveNonLinUKFSSM,
 	LinearGaussianSSM,
 	LinearGaussianCISSM,
 	NonlinearGaussianSSM,
@@ -27,5 +28,6 @@ export
 include("common.jl")
 include("KalmanFilter.jl")
 include("ExtendedKalmanFilter.jl")
+include("UnscentedKalmanFilterAdditive.jl")
 
 end # module
