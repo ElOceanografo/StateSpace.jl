@@ -63,8 +63,6 @@ for i in 2:numObs
     trueState[:,i] = processFunction(trueState[:,i-1])
     noisyObs[:,i] = trueState[:,i] + sqrt(observationCovariance)*randn(2)
 end
-
-
 #End Section: Generate noisy observations
 ################################################################################
 
