@@ -76,9 +76,11 @@ Given a full set of filtered state estimates and a full data set, go back and re
 
 -	The extended Kalman filter. This method can be applied to nonlinear problems with Gaussian noise and error. It works by linearizing the equations around the current state estimate, calculating the required Jacobians automagically using [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
 
+- The unscented Kalman filter for additive noise. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution. 
+
 ### Algorithms on the way:
 
--	The unscented[[2]](2) Kalman filter. Applicable to nonlinear and non-Gaussian problems.
+-	The augmented unscented[[2]](2) Kalman filter. Applicable to nonlinear and non-Gaussian problems.
 -	The particle filter. Applicable to nonlinear and non-gaussian problems.
 
 ### Model fitting
