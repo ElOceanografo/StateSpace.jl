@@ -1,3 +1,12 @@
+"""
+Data structure representing state space model
+
+#### Fields
+- `f` : The process model function relating the previous state of the system to the current state.
+- `V` : N x N covariance matrix for the process
+- `g` : The observation model function. This describes how the observation is generated from the system state at the current time
+- `W` : M x M covariance matrix for the observation
+"""
 type AdditiveNonLinUKFSSM{T} <: AbstractSSM
     f::Function # Process function
 	V::Matrix{T} # Process convariance
@@ -5,24 +14,55 @@ type AdditiveNonLinUKFSSM{T} <: AbstractSSM
 	W::Matrix{T} # Observation covariance
 end
 
+function AdditiveNonLinUKFSSM{T}(f::Function, V::Matrix{T},
+		g::Function, W::Matrix{T})
+    return AdditiveNonLinUKFSSM{T}(f, V, g, W)
+end
+
+"""
+Data structure containing the parameters required to place the sigma points for the Unscented Kalman Filter
+
+#### Fields
+- `α` : Determines the spread of the sigma points around the mean of the system state. It is usually set to a small positive value. The default is set to 1e-3.
+- `β` : Is used to incorporate prior knowledge of the distribution of the state. For Gaussian distributions a value of 2.0 is optimal. The default is set to 2.0
+- `κ` : Is a secondary scaling parameter which also determines the spread of sigma points around the mean of the system. This parameter allows for additional 'fine tuning'. It is usually set to a small value. The default is set to 0.0
+"""
 type UKFParameters{T<:Real}
     α::T
     β::T
     κ::T
 end
 
+"""
+Data structure containing sigma points and their respective weights for the Unscented Kalman Filter
+
+#### Fields
+- `χ` : The matrix containing the 2L+1 sigma vectors, where L is the length of the system state vector.
+- `wm` : Vector containing the weights for the corresponding sigma vectors required to reconsruct the predicted mean.
+- `wc` : Vector containing the weights for the corresponding sigma vectors required to reconsruct the predicted covariance.
+"""
 type SigmaPoints{T<:Real}
     χ::Matrix{T}
     wm::Vector{T}
     wc::Vector{T}
 end
 
-function AdditiveNonLinUKFSSM{T}(f::Function, V::Matrix{T},
-		g::Function, W::Matrix{T})
-    return AdditiveNonLinUKFSSM{T}(f, V, g, W)
-end
+"""
+# calcSigmaPoints
+Function to calculate the sigma points for the Unscented Transform
 
+`calcSigmaPoints(state, α, β, κ)`
+#### Parameters
+- `state` : AbstractMvNormal type representing the current state estimate (mean vector with covariance matrix).
+- `α` : Determines the spread of the sigma points around the mean of the system state. It is usually set to a small positive value. The default is set to 1e-3.
+- `β` : Is used to incorporate prior knowledge of the distribution of the state. For Gaussian distributions a value of 2.0 is optimal. The default is set to 2.0.
+- `κ` : Is a secondary scaling parameter which also determines the spread of sigma points around the mean of the system. This parameter allows for additional 'fine tuning'. It is usually set to a small value. The default is set to 0.0
 
+`calcSigmaPoints(state, params)`
+#### Parameters
+- `state` : AbstractMvNormal type representing the current state estimate (mean vector with covariance matrix).
+- `params` : UKFParameters type containing the α, β and κ parameters for the Unscented Kalman Filter.
+"""
 function calcSigmaPoints{T}(state::AbstractMvNormal, α::T, β::T, κ::T)
     x = mean(state)
     p = cov(state)
@@ -45,6 +85,15 @@ function calcSigmaPoints{T}(state::AbstractMvNormal, α::T, β::T, κ::T)
 end
 calcSigmaPoints(state::AbstractMvNormal, params::UKFParameters) = calcSigmaPoints(state, params.α, params.β, params.κ)
 
+"""
+# timeUpdate
+Function to calculate the predicted mean and the predicted covariance given a UKF model and the sigma points with their corresponding weights
+
+`timeUpdate(m, sp)`
+#### Parameters
+- `m` : AdditiveNonLinUKFSSM type containing the parameters of the Unscented Kalman Filter model.
+- `sp` : SigmaPoints type containing the matrix of sigma vectors and their corresponding weights
+"""
 function timeUpdate(m::AdditiveNonLinUKFSSM, sp::SigmaPoints)
     L, M  = size(sp.χ)
     χ_x = zeros(L, M)
