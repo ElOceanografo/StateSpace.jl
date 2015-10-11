@@ -169,9 +169,9 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal)
     y_obs = zeros(y)
     loglik = 0.0
     for i in 1:size(y, 2)
+        y_current = y[:, i]
         x_pred = predict(m, x_filtered[i])
         y_pred = observe(m, x_pred)
-        y_current = y[:, i]
         # Check for missing values in observation
         y_Boolean = isnan(y_current)
         if any(y_Boolean)
