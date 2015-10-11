@@ -137,13 +137,16 @@ function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, 
     return MvNormal(y_pred, P_yy), P_xy
 end
 
-function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
-    yPred, P_xy = observe(m, x, sp, y)
+function innovate(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, yPred::AbstractMvNormal, P_xy::Matrix, sp::SigmaPoints, y::Vector)
     kalmanGain = P_xy * inv(cov(yPred))
     new_x = mean(x) + kalmanGain * (y - mean(yPred))
     new_cov = cov(x) - kalmanGain * cov(yPred) * kalmanGain'
-
     return MvNormal(new_x, new_cov)
+end
+
+function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y::Vector)
+    yPred, P_xy = observe(m, x, sp, y)
+    return innovate(m, x, yPred, P_xy, sp, y)
 end
 
 function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, α::T=1e-3, β::T=2.0, κ::T=0.0)
