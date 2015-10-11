@@ -151,18 +151,25 @@ end
 
 function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, α::T=1e-3, β::T=2.0, κ::T=0.0)
     params = UKFParameters(α, β, κ)
-    x_filtered = Array(AbstractMvNormal, size(y, 2))
-    loglik = 0.0 #NEED TO SORT OUT LOGLIKELIHOOD FOR UKF
-	x_pred, sigma_points = predict(m, x0, params)
-	x_filtered[1] = update(m, x_pred, sigma_points, y[:, 1])
-	for i in 2:size(y, 2)
-		x_pred, sigma_points = predict(m, x_filtered[i-1], params)
+    x_filtered = Array(AbstractMvNormal, size(y, 2) + 1)
+	x_filtered[1] = x0
+    y_obs = zeros(y)
+    loglik = 0.0
+# 	x_pred, sigma_points = predict(m, x0, params)
+# 	x_filtered[1] = update(m, x_pred, sigma_points, y[:, 1])
+	for i in 1:size(y, 2)
+        y_current = y[:, i]
+		x_pred, sigma_points = predict(m, x_filtered[i], params)
+        y_pred, P_xy = observe(m, x_pred, sigma_points, y_current)
 		# Check for missing values in observation
-		if any(isnan(y[:, i]))
-            x_filtered[i] = x_pred
-        else
-            x_filtered[i] = update(m, x_pred, sigma_points, y[:, i])
+        y_Boolean = isnan(y_current)
+        if any(y_Boolean)
+            y_current = estimateMissingObs!(m, x_pred, y_pred, y_current, y_Boolean)
         end
+        x_filtered[i+1] = innovate(m, x_pred, y_pred, P_xy, sigma_points, y_current)
+        loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y_current)[1], y_current) +
+            logpdf(x_pred, mean(x_filtered[i+1]))
+        y_obs[:,i] = y_current
 	end
-	return FilteredState(y, x_filtered, loglik)
+	return FilteredState(y_obs, x_filtered, loglik)
 end
