@@ -91,6 +91,9 @@ function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
 	return MvNormal(G * mean(x), G * cov(x) * G' + m.W)
 end
 
+"""
+NEED TO ADD DOCUMENTATION HERE
+"""
 function innovate(m::AbstractGaussianSSM, pred::AbstractMvNormal, y_pred::AbstractMvNormal, y)
     G = observation_matrix(m, pred)
 	innovation = y - mean(y_pred)
@@ -161,24 +164,25 @@ t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
 filtering, run `smooth` on the FilteredState produced by this function.
 """
 function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal)
-	x_filtered = Array(AbstractMvNormal, size(y, 2))
-	loglik = 0.0
-	x_pred = predict(m, x0)
-	x_filtered[1] = update(m, x_pred, y[:, 1])
-	loglik = logpdf(x_filtered[1], mean(x_pred)) +
-		logpdf(observe(m, x_filtered[1]), y[:,1])
-	for i in 2:size(y, 2)
-		x_pred = predict(m, x_filtered[i-1])
-		# Check for missing values in observation
-		if any(isnan(y[:, i]))
-			x_filtered[i] = x_pred
-		else
-			x_filtered[i] = update(m, x_pred, y[:, i])
-			loglik += logpdf(observe(m, x_filtered[i]), y[:, i])
-		end
-		loglik += logpdf(x_pred, mean(x_filtered[i]))
-	end
-	return FilteredState(y, x_filtered, loglik)
+	x_filtered = Array(AbstractMvNormal, size(y, 2) + 1)
+	x_filtered[1] = x0
+    y_obs = zeros(y)
+    loglik = 0.0
+    for i in 1:size(y, 2)
+        x_pred = predict(m, x_filtered[i])
+        y_pred = observe(m, x_pred)
+        y_current = y[:, i]
+        # Check for missing values in observation
+        y_Boolean = isnan(y_current)
+        if any(y_Boolean)
+            y_current = estimateMissingObs!(m, x_pred, y_pred, y_current, y_Boolean)
+        end
+        x_filtered[i+1] = innovate(m, x_pred, y_pred, y_current)
+        loglik += logpdf(observe(m, x_filtered[i+1]), y_current) +
+            logpdf(x_pred, mean(x_filtered[i+1]))
+        y_obs[:,i] = y_current
+    end
+    return FilteredState(y_obs, x_filtered, loglik)
 end
 
 """
@@ -256,4 +260,40 @@ function fit(build_func, y, x0, params0, args...)
 		return -loglikelihood(smooth(m, y, x0))
 	end
 	fit = optimize(objective, params0, args...)
+end
+
+function estimateMissingObs!(m::AbstractSSM, x::AbstractMvNormal, y_pred::AbstractMvNormal, y::Vector, yBool::Vector{Bool})
+    ##### Generate selector matrices #####
+    #Preallocate Arrays
+    numObs = length(y)
+    S = eye(numObs)
+    Sc = eye(numObs)
+    yObs = Vector{Real}()
+    #Loop through each observation
+    for i in numObs:-1:1
+        #If observation is an NaN value then remove the corresponding column of the selector matrix
+        #otherwise remove the corresponding column of the compliment selector matrix and add observed value to yObs matrix
+        if yBool[i]
+            S = S[:, 1:size(S,2) .!= i]
+        else
+            Sc = Sc[:, 1:size(Sc,2) .!= i]
+            push!(yObs, y[i])
+        end
+    end
+    #Transpose the selector matrices
+    S = S'
+    Sc = Sc'
+    yObs = reverse(yObs) #Reverse the observation vector to correct the order
+
+    ##### Estimate missing Observations #####
+    μ_yMiss = Sc*mean(y_pred)  + Sc*m.W*S' * inv(S*m.W*S') * (yObs - S*mean(y_pred))
+    Σ_yMiss = Sc*m.W*Sc' - Sc*m.W*S' * inv(S*m.W*S') * S*m.W*Sc'
+
+    ##### Reconstruct observation array and covariance matrix
+    S_full = [S;Sc] #Concatenate selector matrices
+    y_full = S_full' * [yObs; μ_yMiss] # Reconstruct Observation vector
+    y_covFull = S_full' * [S*m.W; Σ_yMiss*Sc] # Reconstruct Observation covariance matrix
+
+    m.W = y_covFull #Update Measurement noise matrix
+    return y_full #Return estimated observation vector
 end
