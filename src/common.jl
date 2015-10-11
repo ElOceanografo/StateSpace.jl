@@ -92,7 +92,7 @@ function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
 end
 
 function innovate(m::AbstractGaussianSSM, pred::AbstractMvNormal, y_pred::AbstractMvNormal, y)
-    G = observation_matrix(m, x)
+    G = observation_matrix(m, pred)
 	innovation = y - mean(y_pred)
 	innovation_cov = cov(y_pred)
 	K = cov(pred) * G' * inv(innovation_cov)
