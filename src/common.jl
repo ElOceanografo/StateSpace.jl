@@ -91,6 +91,16 @@ function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
 	return MvNormal(G * mean(x), G * cov(x) * G' + m.W)
 end
 
+function innovate(m::AbstractGaussianSSM, pred::AbstractMvNormal, y_pred::AbstractMvNormal, y)
+    G = observation_matrix(m, x)
+	innovation = y - mean(y_pred)
+	innovation_cov = cov(y_pred)
+	K = cov(pred) * G' * inv(innovation_cov)
+	mean_update = mean(pred) + K * innovation
+	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
+	return MvNormal(mean_update, cov_update)
+end
+
 """
 Refine a forecast state based on a new observation.
 
@@ -104,13 +114,8 @@ Refine a forecast state based on a new observation.
 all data up to t.
 """
 function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y)
-	G = observation_matrix(m, pred)
-	innovation = y - G * mean(pred)
-	innovation_cov = G * cov(pred) * G' + m.W
-	K = cov(pred) * G' * inv(innovation_cov)
-	mean_update = mean(pred) + K * innovation
-	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
-	return MvNormal(mean_update, cov_update)
+    y_pred = observe(m, pred)
+    return innovate(m, pred, y_pred, y)
 end
 
 
