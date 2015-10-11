@@ -115,9 +115,9 @@ filtered_state = filter(linCISMM, observations, initial_guess)
 #documentation for information about how plotting works if you are unfamiliar.
 #Website: http://gadflyjl.org/
 #Plot results
-x_filt = Vector{Float64}(numObs)
-y_filt = Vector{Float64}(numObs)
-for i in 1:numObs
+x_filt = Vector{Float64}(numObs+1)
+y_filt = Vector{Float64}(numObs+1)
+for i in 1:numObs+1
     current_state = filtered_state.state[i]
     x_filt[i] = current_state.μ[1]
     y_filt[i] = current_state.μ[3]
@@ -132,7 +132,7 @@ getColors = distinguishable_colors(n, Color[LCHab(70, 60, 240)],
 
 cannonball_plot = plot(
     layer(x=x_pos_true, y=y_pos_true, Geom.line, Theme(default_color=getColors[3])),
-    layer(x=[initial_guess_state[1]; x_filt], y=[initial_guess_state[3]; y_filt], Geom.line, Theme(default_color=getColors[1])),
+    layer(x=x_filt, y=y_filt, Geom.line, Theme(default_color=getColors[1])),
     layer(x=x_pos_obs, y=y_pos_obs, Geom.point, Theme(default_color=getColors[2])),
     Guide.xlabel("X position"), Guide.ylabel("Y position"),
     Guide.manual_color_key("Colour Key",["Filtered Estimate", "Measurements","True Value "],[getColors[1],getColors[2],getColors[3]]),
