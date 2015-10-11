@@ -116,7 +116,8 @@ function predict(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, params::UKFParame
     return pred_state, new_sigPoints
 end
 
-function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, obsLength::Int64)
+function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
+    obsLength = length(y)
     L, M = size(sp.χ)
     y_trans = zeros(obsLength, M)
     y_pred = zeros(obsLength)
@@ -137,8 +138,7 @@ function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, 
 end
 
 function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
-    obsLength = length(y)
-    yPred, P_xy = observe(m, x, sp, obsLength)
+    yPred, P_xy = observe(m, x, sp, y)
     kalmanGain = P_xy * inv(cov(yPred))
     new_x = mean(x) + kalmanGain * (y - mean(yPred))
     new_cov = cov(x) - kalmanGain * cov(yPred) * kalmanGain'
