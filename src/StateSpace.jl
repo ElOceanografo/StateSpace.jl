@@ -22,6 +22,7 @@ export
 	update!,
 	filter,
 	smooth,
+    estimateMissingObs!,
 	loglikelihood,
 	simulate
 
