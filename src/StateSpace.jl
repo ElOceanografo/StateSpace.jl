@@ -20,6 +20,7 @@ export
 	observe,
 	update,
 	update!,
+    innovate,
 	filter,
 	smooth,
     estimateMissingObs!,
