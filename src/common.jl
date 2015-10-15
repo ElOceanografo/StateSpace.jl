@@ -268,7 +268,7 @@ function estimateMissingObs!(m::AbstractSSM, x::AbstractMvNormal, y_pred::Abstra
     numObs = length(y)
     S = eye(numObs)
     Sc = eye(numObs)
-    yObs = Vector{Real}()
+    yObs = Vector{typeof(NaN)}()
     #Loop through each observation
     for i in numObs:-1:1
         #If observation is an NaN value then remove the corresponding column of the selector matrix
@@ -293,6 +293,11 @@ function estimateMissingObs!(m::AbstractSSM, x::AbstractMvNormal, y_pred::Abstra
     S_full = [S;Sc] #Concatenate selector matrices
     y_full = S_full' * [yObs; μ_yMiss] # Reconstruct Observation vector
     y_covFull = S_full' * [S*m.W; Σ_yMiss*Sc] # Reconstruct Observation covariance matrix
+
+    #Ensure that the covariance matrix is symmetric
+    for i in 1:numObs-1
+        y_covFull[i+1:end, i] = y_covFull[i, i+1:end]
+    end
 
     m.W = y_covFull #Update Measurement noise matrix
     return y_full #Return estimated observation vector
