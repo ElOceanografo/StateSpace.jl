@@ -36,16 +36,18 @@ measurement_noise_variance = 25.0
 numObs = 100
 true_values = Vector{Float64}(numObs)
 population_measurements = Vector{Float64}(numObs)
+growth_rate_measurements = Vector{Float64}(numObs)
 for i in 1:numObs
     true_values[i] = logisticGrowth(r, p0, k, i*Δt)
     population_measurements[i] = true_values[i] + randn() * sqrt(measurement_noise_variance)
+    growth_rate_measurements[i] = NaN
 end
 
 #Since we're going to assume that our state consists of a growth rate, r,
 #as well as a population rate, p, we need measurements of the growth rate.
 #The problem is that we don't actually observe the growth rate directly.
 #So we will set these measurements to zero.
-growth_rate_measurements = zeros(numObs)
+#growth_rate_measurements = zeros(numObs)
 
 #Then we put these measurements together
 measurements = [growth_rate_measurements population_measurements]'
