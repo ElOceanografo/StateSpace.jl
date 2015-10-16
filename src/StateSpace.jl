@@ -23,7 +23,7 @@ export
     innovate,
 	filter,
 	smooth,
-    estimateMissingObs!,
+    estimateMissingObs,
 	loglikelihood,
 	simulate
 
