@@ -100,7 +100,7 @@ initial_guess = MvNormal([0.5, 10], diagm([1.0,20.0]))
 ################################################################################
 #Section: Execute the Extended Kalman Filter
 #-------------------------------------------------------------------------------
-filtered_state = filter(nonLinSSM, measurements, initial_guess)
+filtered_state = filter(nonLinSSM, measurements, initial_guess, true)
 #End Section: Execute  the Extended Kalman Filter
 ################################################################################
 
