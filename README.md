@@ -32,10 +32,10 @@ obs = trueVal + randn(noObs) * sqrt(0.1)
 
 #Define process and observation model
 pm = 1.0     # process model parameter
-pc = 0.00001 # process variance
+pv = 0.00001 # process variance
 om = 1.0     # observation model parameter
-oc = 0.1     # observation variance
-linSSM = LinearGaussianSSM(pm, pc, om, oc) #create linear State space model object
+ov = 0.1     # observation variance
+linSSM = LinearGaussianSSM(pm, pv, om, ov) #create linear State space model object
 
 init_guess = MvNormal([3.0], [1.0]) #initial guess of the state mean and variance.
 
@@ -76,7 +76,7 @@ Given a full set of filtered state estimates and a full data set, go back and re
 
 -	The extended Kalman filter. This method can be applied to nonlinear problems with Gaussian noise and error. It works by linearizing the equations around the current state estimate, calculating the required Jacobians automagically using [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
 
-- The unscented Kalman filter for additive noise. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution. 
+- The unscented Kalman filter for additive noise. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution.
 
 ### Algorithms on the way:
 
