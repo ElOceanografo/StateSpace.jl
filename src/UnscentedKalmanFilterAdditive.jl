@@ -206,3 +206,43 @@ function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, e
 	end
 	return FilteredState(y_obs, x_filtered, loglik)
 end
+
+function smoothedTimeUpdate(m::AdditiveNonLinUKFSSM, currentState::AbstractMvNormal, sp::SigmaPoints)
+    L, M  = size(sp.χ)
+    χ_x = zeros(L, M)
+    x_pred = zeros(L)
+    p_pred = zeros(L, L)
+    cross_cov = zeros(L, L)
+    for i in 1:2L+1
+        χ_x[:,i] = m.f(sp.χ[:,i])
+        x_pred += sp.wm[i] * χ_x[:,i]
+    end
+    for i in 1:2L+1
+        p_pred += sp.wc[i] * (χ_x[:,i] - x_pred)*(χ_x[:,i] - x_pred)'
+        cross_cov += sp.wc[i] * (sp.χ[:,i] - mean(currentState)) * (χ_x[:,i] - x_pred)'
+    end
+    p_pred += m.V
+    return MvNormal(x_pred, p_pred), cross_cov
+end
+
+function smooth{T}(m::AdditiveNonLinUKFSSM, fs::FilteredState, α::T=1e-3, β::T=2.0, κ::T=0.0)
+    params = UKFParameters(α, β, κ)
+	n = size(fs.observations, 2)
+	smooth_dist = Array(AbstractMvNormal, n)
+	smooth_dist[end] = fs.state[end]
+    loglik = 0.0
+	#loglik = logpdf(observe(m, smooth_dist[end]), fs.observations[:, end])
+	for i in (n - 1):-1:1
+		sp = calcSigmaPoints(fs.state[i], params)
+        pred_state, cross_covariance = smoothedTimeUpdate(m, fs.state[i], sp)
+        smootherGain = cross_covariance * inv(cov(pred_state))
+        x_smooth = mean(fs.state[i]) + smootherGain * (mean(smooth_dist[i+1]) - mean(pred_state))
+        P_smooth = cov(fs.state[i]) + smootherGain * (cov(smooth_dist[i+1]) - cov(pred_state)) * smootherGain'
+		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
+# 		loglik += logpdf(predict(m, smooth_dist[i]), mean(smooth_dist[i+1]))
+# 		if ! any(isnan(fs.observations[:, i]))
+# 			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
+# 		end
+	end
+	return SmoothedState(fs.observations, smooth_dist, loglik)
+end
