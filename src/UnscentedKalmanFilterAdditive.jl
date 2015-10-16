@@ -137,6 +137,27 @@ function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, 
     return MvNormal(y_pred, P_yy), P_xy
 end
 
+function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y, meas_cov::Matrix)
+    obsLength = length(y)
+    L, M = size(sp.χ)
+    y_trans = zeros(obsLength, M)
+    y_pred = zeros(obsLength)
+    for i in 1:2L+1
+        y_trans[:,i] = m.g(sp.χ[:,i])
+        y_pred += sp.wm[i] * y_trans[:,i]
+    end
+
+    P_xy = zeros(L, obsLength)
+    P_yy = zeros(obsLength, obsLength)
+    for i in 1:2L+1
+        resy = (y_trans[:,i] - y_pred)
+        P_xy += sp.wc[i] * (sp.χ[:,i] - mean(x)) * resy'
+        P_yy += sp.wc[i] * resy * resy'
+    end
+    P_yy += meas_cov
+    return MvNormal(y_pred, P_yy), P_xy
+end
+
 function innovate(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, yPred::AbstractMvNormal, P_xy::Matrix, sp::SigmaPoints, y::Vector)
     kalmanGain = P_xy * inv(cov(yPred))
     new_x = mean(x) + kalmanGain * (y - mean(yPred))
@@ -149,7 +170,12 @@ function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y
     return innovate(m, x, yPred, P_xy, sp, y)
 end
 
-function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, α::T=1e-3, β::T=2.0, κ::T=0.0)
+function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y::Vector, meas_cov::Matrix)
+    yPred, P_xy = observe(m, x, sp, y, meas_cov)
+    return innovate(m, x, yPred, P_xy, sp, y)
+end
+
+function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, estMissObs::Bool=false, α::T=1e-3, β::T=2.0, κ::T=0.0)
     params = UKFParameters(α, β, κ)
     x_filtered = Array(AbstractMvNormal, size(y, 2) + 1)
 	x_filtered[1] = x0
@@ -164,11 +190,18 @@ function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, �
 		# Check for missing values in observation
         y_Boolean = isnan(y_current)
         if any(y_Boolean)
-            y_current = estimateMissingObs!(m, x_pred, y_pred, y_current, y_Boolean)
+            if estMissObs
+                y_current, y_cov_mat = estimateMissingObs(m, x_pred, y_pred, y_current, y_Boolean)
+                x_filtered[i+1] = update(m, x_pred, sigma_points, y_current, y_cov_mat)
+                loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y_current)[1], y_current)
+            else
+                x_filtered[i+1] = x_pred
+            end
+        else
+            x_filtered[i+1] = update(m, x_pred, sigma_points, y_current)
+			loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y_current)[1], y_current)
         end
-        x_filtered[i+1] = innovate(m, x_pred, y_pred, P_xy, sigma_points, y_current)
-        loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y_current)[1], y_current) +
-            logpdf(x_pred, mean(x_filtered[i+1]))
+        loglik += logpdf(x_pred, mean(x_filtered[i+1]))
         y_obs[:,i] = y_current
 	end
 	return FilteredState(y_obs, x_filtered, loglik)
