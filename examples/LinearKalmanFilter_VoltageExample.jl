@@ -2,7 +2,8 @@
 #This example closely follows that given on "Greg Czerniak's Website". Namely
 #the voltage example on this page: http://greg.czerniak.info/guides/kalman1/
 
-#Let's import the modules required to execute the Kalman Filter
+#Let's import the modules required to execute the Kalman Filter and visualize
+#the results
 using StateSpace
 using Distributions
 using DataFrames
