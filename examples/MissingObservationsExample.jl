@@ -40,12 +40,13 @@ numObs = 30
 numBalloons = length(initialState)
 observationVariance = 2.0
 observations = Matrix{Float64}(numBalloons,numObs)
-for i in 1:numObs
-    if i == 1
-        observations[1,1] = 0.9 * initialState[1] + randn()*sqrt(observationVariance)
-    else
-        observations[1,i] = 0.9 * observations[1,i-1] + randn()*sqrt(observationVariance)
-    end
+trueValue = Vector{Float64}(numObs)
+trueValue[1] = 0.9 * initialState[1]
+observations[1,1] = trueValue[1] + randn()*sqrt(observationVariance)
+observations[2,1] = NaN
+for i in 2:numObs
+    trueValue[i] = 0.9*trueValue[i-1]
+    observations[1,i] = trueValue[i] + randn()*sqrt(observationVariance)
     observations[2:end,i] = [NaN, NaN]
 end
 #End Section: Generate noisy Observations
