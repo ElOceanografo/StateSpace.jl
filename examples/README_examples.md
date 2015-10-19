@@ -23,3 +23,10 @@ The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/exampleREADME/exampl
 
 The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/UnscentedKalmanFilter_DampedOscillatorExample.jl) and the [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/UnscentedKalmanFilter_DampedOscillatorExample.ipynb) describes a problem where we are concerned with obtaining the position of a Van der Pol Oscillator over time. The example produces the following result
 ![UKF additive](figures/UKFadditive_vanderpol_plot.png)
+
+####Missing Observations - Deflating balloon example
+
+The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/MissingObs/examples/MissingObservationsExample.jl) and the [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/MissingObs/examples/MissingObservationsExample.ipynb) describes a problem where we have three balloons that deflate over time but we only observe the radius of one of the balloons. This example is completely made up and only exists to serve the purpose of demonstrating how missing observations work in the StateSpace.jl package. We show the effects of how the different implementations deal with missing observations with 3 different cases.
+![Missing Obs case 1](figures/MissingObs1_plot.png)
+![Missing Obs case 2](figures/MissingObs2_plot.png)
+![Missing Obs case 3](figures/MissingObs3_plot.png)
