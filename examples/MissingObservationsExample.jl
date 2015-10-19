@@ -1,14 +1,14 @@
 #Missing observations example
 #This example is a really basic/unrealistic example that was made up
 #to demonstrate the use of missing observations with the StateSpace.jl
-#package. In this example we have two (spherical) balloons that deflate
+#package. In this example we have three (spherical) balloons that deflate
 #over time. We record (noisy) measurements of the radius of only one of
 #the balloons over time. We assume the process is that the balloon's
 #radius decreases by 10% of it's previous radius with each observation.
 #We consider 3 cases for the unobserved balloon:
 # 1) Our best guess is the prior prediction
 # 2) We have some information on the measurement error
-# 3) We know that there is some correlation between both balloons.
+# 3) We know that there is some correlation between two of the balloons.
 
 #Let's import the modules required to execute the Kalman Filter and visualize
 #the results
@@ -19,17 +19,15 @@ using DataFrames
 using Colors
 
 ################################################################################
-#Section: Set initial guess of the state
+#Section: Set guess of the initial state
 #-------------------------------------------------------------------------------
 #We'll begin with a guess and set the variances to 1 as default. Notice that the
-#radius of the first balloon is assumed to be twice that of the second balloon.
-#I've included a third balloon here since it will make the effects of the 3rd
-#case (mentioned above) clearer
+#radius of the first balloon is assumed to be twice that of the other balloons.
+#The third balloon is included to make the effects of the 3rd case (mentioned
+#above) clearer
 initialState = [30.0, 15.0, 15.0]
 
-initialCov = [1.0 0.0 0.0;
-               0.0 1.0 0.0;
-               0.0 0.0 1.0]
+initialCov = eye(length(initialState))
 initialGuess = MvNormal(initialState, initialCov)
 #End Section: Set initial guess of the state
 ################################################################################
@@ -60,7 +58,7 @@ end
 #deflate by 10% of their previous state for each iteration and again set the
 #variances to 1.
 processMatrix = 0.9 * eye(initialCov)
-processCov = 1.0 * eye(initialCov)
+processCov = eye(initialCov)
 
 #We'll assume that we measure the radius directly and hence the observation
 #matrix is equivalent to the identity matrix. The measurement covariance matrix
