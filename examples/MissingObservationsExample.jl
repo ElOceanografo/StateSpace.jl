@@ -43,7 +43,7 @@ observations = Matrix{Float64}(numBalloons,numObs)
 trueValue = Vector{Float64}(numObs)
 trueValue[1] = 0.9 * initialState[1]
 observations[1,1] = trueValue[1] + randn()*sqrt(observationVariance)
-observations[2,1] = NaN
+observations[2:end,1] = [NaN,NaN]
 for i in 2:numObs
     trueValue[i] = 0.9*trueValue[i-1]
     observations[1,i] = trueValue[i] + randn()*sqrt(observationVariance)
