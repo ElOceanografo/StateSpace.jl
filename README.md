@@ -72,16 +72,23 @@ Given a full set of filtered state estimates and a full data set, go back and re
 
 ### Algorithms already implemented:
 
--	The Kalman[[1]](1) filter. This is a fast and optimal technique for linear systems with Gaussian process noise and observational error.
+-	**The Kalman[[1]](1) filter**. This is a fast and optimal technique for linear systems with Gaussian process noise and observational error.
 
--	The extended Kalman filter. This method can be applied to nonlinear problems with Gaussian noise and error. It works by linearizing the equations around the current state estimate, calculating the required Jacobians automagically using [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
+- **The Kalman smoother**. The smoother improves the state estimates obtained by filtering.
 
-- The unscented Kalman filter for additive noise. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution.
+-	**The Extended Kalman filter**. This method can be applied to nonlinear problems with Gaussian noise and error. It works by linearizing the equations around the current state estimate, calculating the required Jacobians automagically using [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
+
+- **The Unscented Kalman filter for additive noise**. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution.
+
+- **The Unscented Rauch-Tung-Striebel Smoother**. This works in a similar way to the RTS smoother for the linear system model except it can be applied to non-linear state space models.
+
+- **Missing Observations**. There are in fact two implementations. One basically assumes that the system follows the predicted states and propagates the errors. The other implementation assumes that the observed measurements and the missing measurements come from a joint multivariate normal distribution and uses this assumption to estimate the unobserved measurements. This is useful if you have some information about the missing observations, especially if the measurements are correlated.
 
 ### Algorithms on the way:
 
 -	The augmented unscented[[2]](2) Kalman filter. Applicable to nonlinear and non-Gaussian problems.
 -	The particle filter. Applicable to nonlinear and non-gaussian problems.
+- Parameter estimation via Expectation-Maximisation methods.
 
 ### Model fitting
 
