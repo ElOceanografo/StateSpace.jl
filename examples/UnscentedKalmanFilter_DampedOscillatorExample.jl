@@ -33,8 +33,7 @@ end
 observationFunction(x::Vector) = x
 
 #Set process noise covariance matrix
-processCovariance = 1e-2*[0.1 0;
-    0 1e-3]
+processCovariance = 1e-1*[0.1 0;0 1e-3]
 
 #Set the observation noise covariance
 observationCovariance = 3e-2*eye(2)
@@ -125,6 +124,11 @@ display(oscillatorx1_state_plot)
 ################################################################################
 #Section: Perform Unscented Kalman Smoother
 #-------------------------------------------------------------------------------
+#Everything can be performed much better in hindsight and that's essentially
+#where the Unscented Kalman smoother comes in. Given all of the observations and
+#the filtered state (including the Kalman filter parameters, the smoother
+#attempts to give better estimates of the system's state. Here we perform
+#smoothing on the filtered data.
 smoothed_state = smooth(ukfStateModel, filtered_state)
 #End Section: Perform Unscented Kalman Smoother
 ################################################################################
@@ -147,7 +151,7 @@ df_fs = DataFrame(
     y = x1_array,
     ymin = x1_array - x1Var_array,
     ymax = x1_array + x1Var_array,
-    f = "Filtered values"
+    f = "Smoothed values"
     )
 
 n = 3
@@ -156,7 +160,7 @@ getColors = distinguishable_colors(n, Color[LCHab(70, 60, 240)],
                                    lchoices=Float64[65, 70, 75, 80],
                                    cchoices=Float64[0, 50, 60, 70],
                                    hchoices=linspace(0, 330, 24))
-oscillatorx1_state_plot = plot(
+oscillatorx1_state_plot_smooted = plot(
     layer(x=x_data*Δt, y=noisyObs[1,:], Geom.point, Theme(default_color=getColors[2])),
     layer(x=x_data*Δt, y=trueState[1,:], Geom.line, Theme(default_color=getColors[3])),
     layer(df_fs, x=:x, y=:y, ymin=:ymin, ymax=:ymax, Geom.line, Geom.ribbon),
@@ -164,6 +168,6 @@ oscillatorx1_state_plot = plot(
     Guide.manual_color_key("Colour Key",["Filtered Estimate", "Measurements","True Value "],[getColors[1],getColors[2],getColors[3]]),
     Guide.title("Unscented Kalman Smoother (Additive) Example")
     )
-display(oscillatorx1_state_plot)
+display(oscillatorx1_state_plot_smooted)
 #End Section: Plot results
 ################################################################################
