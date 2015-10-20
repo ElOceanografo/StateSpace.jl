@@ -7,7 +7,7 @@ The *examples* directory contains scripts and IJulia notebooks for each Kalman F
 
 ###Examples
 
-####Basic Linear Kalman Filter and smoother - Voltage Example
+####Basic Linear Kalman Filter and Smoother - Voltage Example
 
 The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/LinearKalmanFilter_VoltageExample.jl) and the [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/LinearKalmanFilter_VoltageExample.ipynb) describes a problem where a constant true voltage is measured with a noisy voltmeter. The results of the filter can be seen below: ![LKF filter](figures/LKF_filtered_plot.png) The StateSpace.jl package also allows to perform smoothing and the same example [script](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/LinearKalmanFilter_VoltageExample.jl) and [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/LinearKalmanFilter_VoltageExample.ipynb) demonstrates how to perform smoothing: ![LKF smoother](figures/LKF_smoothed_plot.png)
 
@@ -19,10 +19,12 @@ The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/exampleREADME/exampl
 
 The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/exampleREADME/examples/ExtendedKalmanFilter_LogisticGrowthExample.jl) and the [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/exampleREADME/examples/ExtendedKalmanFilter_LogisticGrowthExample.ipynb) describes a problem where a population evolves via the logistic growth law (sigmoid/S-shaped curve) so this is a non-linear example. We want to track the population over time given that we have noisy measurements of it. We also want to determine the growth rate even though we don't have any observations of the growth rate. These results can be see below for the population ![EKF control](figures/EKF_population_plot.png) and the growth rate ![EKF control](figures/EKF_growthrate_plot.png)
 
-####Unscented Kalman Filter (Additive noise) - Van der Pol Oscillator Example
+####Unscented Kalman Filter and Smoother(Additive noise) - Van der Pol Oscillator Example
 
-The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/UnscentedKalmanFilter_DampedOscillatorExample.jl) and the [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/UnscentedKalmanFilter_DampedOscillatorExample.ipynb) describes a problem where we are concerned with obtaining the position of a Van der Pol Oscillator over time. The example produces the following result
+The [script](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/UnscentedKalmanFilter_DampedOscillatorExample.jl) and the [notebook](https://github.com/JonnyCBB/StateSpace.jl/blob/master/examples/UnscentedKalmanFilter_DampedOscillatorExample.ipynb) describes a problem where we are concerned with obtaining the position of a Van der Pol Oscillator over time. The example produces the following result for the filter
 ![UKF additive](figures/UKFadditive_vanderpol_plot.png)
+and gives the following result after smoothing.
+![URTSS additive](figures/URTSSadditive_vanderpol_plot.png)
 
 ####Missing Observations - Deflating balloon example
 
