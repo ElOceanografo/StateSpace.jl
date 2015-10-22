@@ -2,7 +2,8 @@
 #This example closely follows that given on "Greg Czerniak's Website". Namely
 #the voltage example on this page: http://greg.czerniak.info/guides/kalman1/
 
-#Let's import the modules required to execute the Kalman Filter
+#Let's import the modules required to execute the Kalman Filter and visualize
+#the results
 using StateSpace
 using Distributions
 using DataFrames
@@ -87,6 +88,7 @@ initial_guess = MvNormal([3.0], [1.0])
 #Now that we have some noisy observations, the Kalman filter parameters and an
 #intial guess for the state of the system, we can run the Kalman Filter
 filtered_state = filter(linSSM, observations, initial_guess)
+@printf("Log Likelihood for Kalman filter: %.2f\n", filtered_state.loglik)
 #End Section: Execute Kalman Filter
 ################################################################################
 
@@ -100,12 +102,14 @@ filtered_state = filter(linSSM, observations, initial_guess)
 x_data = 1:number_of_observations
 state_array = Vector{Float64}(number_of_observations+1)
 confidence_array = Vector{Float64}(number_of_observations+1)
-state_array[1] = initial_guess.μ[1]
-confidence_array[1] = 2*sqrt(initial_guess.Σ.diag[1])
-for i in x_data
+for i in 1:number_of_observations+1
     current_state = filtered_state.state[i]
-    state_array[i+1] = current_state.μ[1]
-    confidence_array[i+1] = 2*sqrt(current_state.Σ.mat[1])
+    state_array[i] = current_state.μ[1]
+    if i != 1
+        confidence_array[i] = 2*sqrt(current_state.Σ.mat[1])
+    else
+        confidence_array[i] = 2*sqrt(current_state.Σ.diag[1])
+    end
 end
 df_fs = DataFrame(
     x = [0;x_data],
@@ -142,6 +146,7 @@ display(filtered_state_plot)
 #to give better estimates of the system's state. Here we perform smoothing on
 #the filtered data.
 smoothed_state = smooth(linSSM, filtered_state)
+@printf("Log Likelihood for RTS smoother: %.2f\n", smoothed_state.loglik)
 #End Section: Execute Kalman Filter
 ################################################################################
 

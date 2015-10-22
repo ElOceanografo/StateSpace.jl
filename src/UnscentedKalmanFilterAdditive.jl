@@ -116,12 +116,11 @@ function predict(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, params::UKFParame
     return pred_state, new_sigPoints
 end
 
-function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
+function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
     obsLength = length(y)
     L, M = size(sp.χ)
     y_trans = zeros(obsLength, M)
     y_pred = zeros(obsLength)
-    x_pred = mean(x)
     for i in 1:2L+1
         y_trans[:,i] = m.g(sp.χ[:,i])
         y_pred += sp.wm[i] * y_trans[:,i]
@@ -131,31 +130,121 @@ function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y
     P_yy = zeros(obsLength, obsLength)
     for i in 1:2L+1
         resy = (y_trans[:,i] - y_pred)
-        P_xy += sp.wc[i] * (sp.χ[:,i] - x_pred) * resy'
+        P_xy += sp.wc[i] * (sp.χ[:,i] - mean(x)) * resy'
         P_yy += sp.wc[i] * resy * resy'
     end
     P_yy += m.W
-    kalmanGain = P_xy * inv(P_yy)
-    new_x = x_pred + kalmanGain * (y - y_pred)
-    new_cov = cov(x) - kalmanGain * P_yy * kalmanGain'
+    return MvNormal(y_pred, P_yy), P_xy
+end
 
+function observe(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y, meas_cov::Matrix)
+    obsLength = length(y)
+    L, M = size(sp.χ)
+    y_trans = zeros(obsLength, M)
+    y_pred = zeros(obsLength)
+    for i in 1:2L+1
+        y_trans[:,i] = m.g(sp.χ[:,i])
+        y_pred += sp.wm[i] * y_trans[:,i]
+    end
+
+    P_xy = zeros(L, obsLength)
+    P_yy = zeros(obsLength, obsLength)
+    for i in 1:2L+1
+        resy = (y_trans[:,i] - y_pred)
+        P_xy += sp.wc[i] * (sp.χ[:,i] - mean(x)) * resy'
+        P_yy += sp.wc[i] * resy * resy'
+    end
+    P_yy += meas_cov
+    return MvNormal(y_pred, P_yy), P_xy
+end
+
+function innovate(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, yPred::AbstractMvNormal, P_xy::Matrix, sp::SigmaPoints, y::Vector)
+    kalmanGain = P_xy * inv(cov(yPred))
+    new_x = mean(x) + kalmanGain * (y - mean(yPred))
+    new_cov = cov(x) - kalmanGain * cov(yPred) * kalmanGain'
     return MvNormal(new_x, new_cov)
 end
 
-function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, α::T=1e-3, β::T=2.0, κ::T=0.0)
+function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y::Vector)
+    yPred, P_xy = observe(m, x, sp, y)
+    return innovate(m, x, yPred, P_xy, sp, y)
+end
+
+function update(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, sp::SigmaPoints, y::Vector, meas_cov::Matrix)
+    yPred, P_xy = observe(m, x, sp, y, meas_cov)
+    return innovate(m, x, yPred, P_xy, sp, y)
+end
+
+function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, estMissObs::Bool=false, α::T=1e-3, β::T=2.0, κ::T=0.0)
     params = UKFParameters(α, β, κ)
-    x_filtered = Array(AbstractMvNormal, size(y, 2))
-    loglik = 0.0 #NEED TO SORT OUT LOGLIKELIHOOD FOR UKF
-	x_pred, sigma_points = predict(m, x0, params)
-	x_filtered[1] = update(m, x_pred, sigma_points, y[:, 1])
-	for i in 2:size(y, 2)
-		x_pred, sigma_points = predict(m, x_filtered[i-1], params)
+    x_filtered = Array(AbstractMvNormal, size(y, 2) + 1)
+	x_filtered[1] = x0
+    y_obs = zeros(y)
+    loglik = 0.0
+	for i in 1:size(y, 2)
+        y_current = y[:, i]
+		x_pred, sigma_points = predict(m, x_filtered[i], params)
+        y_pred, P_xy = observe(m, x_pred, sigma_points, y_current)
 		# Check for missing values in observation
-		if any(isnan(y[:, i]))
-            x_filtered[i] = x_pred
+        y_Boolean = isnan(y_current)
+        if any(y_Boolean)
+            if estMissObs
+                y_current, y_cov_mat = estimateMissingObs(m, x_pred, y_pred, y_current, y_Boolean)
+                x_filtered[i+1] = update(m, x_pred, sigma_points, y_current, y_cov_mat)
+                loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y_current)[1], y_current)
+            else
+                x_filtered[i+1] = x_pred
+            end
         else
-            x_filtered[i] = update(m, x_pred, sigma_points, y[:, i])
+            x_filtered[i+1] = update(m, x_pred, sigma_points, y_current)
+			loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y_current)[1], y_current)
         end
+        loglik += logpdf(x_pred, mean(x_filtered[i+1]))
+        y_obs[:,i] = y_current
 	end
-	return FilteredState(y, x_filtered, loglik)
+	return FilteredState(y_obs, x_filtered, loglik)
+end
+
+function smoothedTimeUpdate(m::AdditiveNonLinUKFSSM, currentState::AbstractMvNormal, sp::SigmaPoints)
+    L, M  = size(sp.χ)
+    χ_x = zeros(L, M)
+    x_pred = zeros(L)
+    p_pred = zeros(L, L)
+    cross_cov = zeros(L, L)
+    for i in 1:2L+1
+        χ_x[:,i] = m.f(sp.χ[:,i])
+        x_pred += sp.wm[i] * χ_x[:,i]
+    end
+    for i in 1:2L+1
+        p_pred += sp.wc[i] * (χ_x[:,i] - x_pred)*(χ_x[:,i] - x_pred)'
+        cross_cov += sp.wc[i] * (sp.χ[:,i] - mean(currentState)) * (χ_x[:,i] - x_pred)'
+    end
+    p_pred += m.V
+    return MvNormal(x_pred, p_pred), cross_cov
+end
+
+function predictSmooth(m::AdditiveNonLinUKFSSM, x::AbstractMvNormal, params::UKFParameters)
+    sigPoints = calcSigmaPoints(x, params)
+    return smoothedTimeUpdate(m, x, sigPoints)[1]
+end
+
+function smooth{T}(m::AdditiveNonLinUKFSSM, fs::FilteredState, α::T=1e-3, β::T=2.0, κ::T=0.0)
+    params = UKFParameters(α, β, κ)
+	n = size(fs.observations, 2)
+	smooth_dist = Array(AbstractMvNormal, n)
+	smooth_dist[end] = fs.state[end]
+    loglik = logpdf(observe(m, smooth_dist[end], calcSigmaPoints(smooth_dist[end], params), fs.observations[:, end])[1], fs.observations[:, end])
+	for i in (n - 1):-1:1
+		sp = calcSigmaPoints(fs.state[i+1], params)
+        pred_state, cross_covariance = smoothedTimeUpdate(m, fs.state[i+1], sp)
+        smootherGain = cross_covariance * inv(cov(pred_state))
+        x_smooth = mean(fs.state[i+1]) + smootherGain * (mean(smooth_dist[i+1]) - mean(pred_state))
+        P_smooth = cov(fs.state[i+1]) + smootherGain * (cov(smooth_dist[i+1]) - cov(pred_state)) * smootherGain'
+		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
+        loglik += logpdf(predictSmooth(m, smooth_dist[i], params), mean(smooth_dist[i+1]))
+		if !any(isnan(fs.observations[:, i]))
+            loglik += logpdf(observe(m, smooth_dist[i], calcSigmaPoints(smooth_dist[i], params), fs.observations[:, i])[1], fs.observations[:, i])
+		end
+	end
+	return SmoothedState(fs.observations, smooth_dist, loglik)
 end
