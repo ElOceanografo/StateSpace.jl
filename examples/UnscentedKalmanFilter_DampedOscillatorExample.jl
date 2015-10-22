@@ -77,6 +77,7 @@ initial_guess = MvNormal([0.0,0.0], 1.0*eye(2))
 #Section: Execute the Additive noise Unscented Kalman Filter
 #-------------------------------------------------------------------------------
 filtered_state = filter(ukfStateModel, noisyObs, initial_guess)
+@printf("Log Likelihood for Kalman filter: %.2f\n", filtered_state.loglik)
 #End Section: Execute the Additive noise Unscented Kalman Filter
 ################################################################################
 
@@ -130,6 +131,7 @@ display(oscillatorx1_state_plot)
 #attempts to give better estimates of the system's state. Here we perform
 #smoothing on the filtered data.
 smoothed_state = smooth(ukfStateModel, filtered_state)
+@printf("Log Likelihood for RTS smoother: %.2f\n", smoothed_state.loglik)
 #End Section: Perform Unscented Kalman Smoother
 ################################################################################
 

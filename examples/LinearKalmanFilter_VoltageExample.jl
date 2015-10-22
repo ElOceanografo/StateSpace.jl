@@ -88,7 +88,7 @@ initial_guess = MvNormal([3.0], [1.0])
 #Now that we have some noisy observations, the Kalman filter parameters and an
 #intial guess for the state of the system, we can run the Kalman Filter
 filtered_state = filter(linSSM, observations, initial_guess)
-@printf("Log Likelihood: %.2f\n", filtered_state.loglik)
+@printf("Log Likelihood for Kalman filter: %.2f\n", filtered_state.loglik)
 #End Section: Execute Kalman Filter
 ################################################################################
 
@@ -146,6 +146,7 @@ display(filtered_state_plot)
 #to give better estimates of the system's state. Here we perform smoothing on
 #the filtered data.
 smoothed_state = smooth(linSSM, filtered_state)
+@printf("Log Likelihood for RTS smoother: %.2f\n", smoothed_state.loglik)
 #End Section: Execute Kalman Filter
 ################################################################################
 
