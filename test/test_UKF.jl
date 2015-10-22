@@ -1,3 +1,7 @@
+using StateSpace
+using Distributions
+using Base.Test
+
 println("Testing UnscentedKalmanFilterAdditive.jl...")
 
 Δt = 0.1 # Set the time step
@@ -14,11 +18,11 @@ end
 observationFunction(x::Vector) = x
 
 #Set process noise covariance matrix
-processCovariance = 1e-2*[0.1 0;
+processCovariance = 1e-1*[0.1 0;
     0 1e-3]
 
 #Set the observation noise covariance
-observationCovariance = 1e-1*eye(2)
+observationCovariance = 3e-2*eye(2)
 
 #Create additive noise UKF model
 ukfStateModel = AdditiveNonLinUKFSSM(processFunction, processCovariance,
@@ -62,5 +66,13 @@ filtered_state = filter(ukfStateModel, noisyObs, initial_guess)
 #End Section: Execute the Additive noise Unscented Kalman Filter
 ################################################################################
 
+################################################################################
+#Section: Perform Unscented Kalman Smoother
+#-------------------------------------------------------------------------------
+smoothed_state = smooth(ukfStateModel, filtered_state)
+#End Section: Perform Unscented Kalman Smoother
+################################################################################
+
+@assert loglikelihood(filtered_state) < loglikelihood(smoothed_state)
 
 println("UnscentedKalmanFilterAdditive.jl passed.\n")
