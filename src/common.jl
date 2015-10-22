@@ -222,16 +222,16 @@ function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	smooth_dist[end] = fs.state[end]
 	loglik = logpdf(observe(m, smooth_dist[end]), fs.observations[:, end])
 	for i in (n - 1):-1:1
-		state_pred = predict(m, fs.state[i])
-		P = cov(fs.state[i])
-		F = process_matrix(m, fs.state[i])
+		state_pred = predict(m, fs.state[i+1])
+		P = cov(fs.state[i+1])
+		F = process_matrix(m, fs.state[i+1])
 		J = P * F' * inv(cov(state_pred))
-		x_smooth = mean(fs.state[i]) + J *
+		x_smooth = mean(fs.state[i+1]) + J *
 			(mean(smooth_dist[i+1]) - mean(state_pred))
 		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
 		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
 		loglik += logpdf(predict(m, smooth_dist[i]), mean(smooth_dist[i+1]))
-		if ! any(isnan(fs.observations[:, i]))
+		if !any(isnan(fs.observations[:, i]))
 			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
 		end
 	end
