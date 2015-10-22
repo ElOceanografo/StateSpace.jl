@@ -196,7 +196,11 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal, es
             x_filtered[i+1] = update(m, x_pred, y_current)
 			loglik += logpdf(observe(m, x_filtered[i+1]), y_current)
         end
-        loglik += logpdf(x_pred, mean(x_filtered[i+1]))
+        if i != 1
+            loglik += logpdf(x_pred, mean(x_filtered[i+1]))
+        else
+            loglik += logpdf(x_filtered[i+1], mean(x_pred))
+        end
         y_obs[:,i] = y_current
     end
     return FilteredState(y_obs, x_filtered, loglik)
