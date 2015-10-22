@@ -235,11 +235,11 @@ function smooth{T}(m::AdditiveNonLinUKFSSM, fs::FilteredState, α::T=1e-3, β::T
 	smooth_dist[end] = fs.state[end]
     loglik = logpdf(observe(m, smooth_dist[end], calcSigmaPoints(smooth_dist[end], params), fs.observations[:, end])[1], fs.observations[:, end])
 	for i in (n - 1):-1:1
-		sp = calcSigmaPoints(fs.state[i], params)
-        pred_state, cross_covariance = smoothedTimeUpdate(m, fs.state[i], sp)
+		sp = calcSigmaPoints(fs.state[i+1], params)
+        pred_state, cross_covariance = smoothedTimeUpdate(m, fs.state[i+1], sp)
         smootherGain = cross_covariance * inv(cov(pred_state))
-        x_smooth = mean(fs.state[i]) + smootherGain * (mean(smooth_dist[i+1]) - mean(pred_state))
-        P_smooth = cov(fs.state[i]) + smootherGain * (cov(smooth_dist[i+1]) - cov(pred_state)) * smootherGain'
+        x_smooth = mean(fs.state[i+1]) + smootherGain * (mean(smooth_dist[i+1]) - mean(pred_state))
+        P_smooth = cov(fs.state[i+1]) + smootherGain * (cov(smooth_dist[i+1]) - cov(pred_state)) * smootherGain'
 		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
         loglik += logpdf(predictSmooth(m, smooth_dist[i], params), mean(smooth_dist[i+1]))
 		if !any(isnan(fs.observations[:, i]))
