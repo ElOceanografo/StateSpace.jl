@@ -181,8 +181,6 @@ function filter{T}(m::AdditiveNonLinUKFSSM, y::Array{T}, x0::AbstractMvNormal, e
 	x_filtered[1] = x0
     y_obs = zeros(y)
     loglik = 0.0
-# 	x_pred, sigma_points = predict(m, x0, params)
-# 	x_filtered[1] = update(m, x_pred, sigma_points, y[:, 1])
 	for i in 1:size(y, 2)
         y_current = y[:, i]
 		x_pred, sigma_points = predict(m, x_filtered[i], params)
