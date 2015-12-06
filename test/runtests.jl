@@ -9,6 +9,6 @@ function random_cov(n)
 end
 
 include("test_KF.jl")
-include("test_EKF.jl")
-include("test_UKF.jl")
+# include("test_EKF.jl")
+# include("test_UKF.jl")
 println("Passed all tests.")

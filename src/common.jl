@@ -1,10 +1,6 @@
 using Distributions
 import Distributions: mean, var, cov, rand
 
-abstract AbstractStateSpaceModel
-typealias AbstractSSM AbstractStateSpaceModel
-abstract AbstractGaussianSSM <: AbstractStateSpaceModel
-abstract AbstractLinearGaussian <: AbstractGaussianSSM
 
 """
 Data structure representing the estimated state of a state-space model
@@ -60,6 +56,7 @@ for op in (:mean, :var, :cov, :cor, :rand)
 	end
 end
 
+
 """
 Forecast the state of the process at the next time step.
 
@@ -70,10 +67,13 @@ Forecast the state of the process at the next time step.
 #### Returns
 - MvNormal distribution representing the forecast and its associated uncertainty.
 """
-function predict(m::AbstractGaussianSSM, x::AbstractMvNormal)
-	F = process_matrix(m, x)
-	return MvNormal(F * mean(x), F * cov(x) * F' + m.V)
+function predict(m::AbstractGaussianSSM, x::AbstractMvNormal;
+		u::Vector=zeros(m.nu), t::Int=1)
+    F = process_matrix(m, x, t)
+    B = control_matrix(m, t)
+    return MvNormal(F * mean(x) + B * u, F * cov(x) * F' + m.V(t))
 end
+
 
 """
 Observe the state process with uncertainty.
@@ -86,54 +86,66 @@ Observe the state process with uncertainty.
 - MvNormal distribution, representing the probability of recording any
 particular observation data.
 """
+function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Int)
+	G = observation_matrix(m, x, t)
+	return MvNormal(G * mean(x), G * cov(x) * G' + m.W(t))
+end
+
 function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
-	G = observation_matrix(m, x)
-	return MvNormal(G * mean(x), G * cov(x) * G' + m.W)
-end
-
-"""
-Refine a forecast state based on a new observation.
-
-#### Parameters
-- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
-- pred : AbstractMvNormal.  Estimate of state at time t, given data up to t-1.
-- y : Vector of the latest observation at time t.
-
-#### Returns
-- MvNormal distribution, representing the estimate of the state at time t given
-all data up to t.
-"""
-function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y)
-	G = observation_matrix(m, pred)
-	innovation = y - G * mean(pred)
-	innovation_cov = G * cov(pred) * G' + m.W
-	K = cov(pred) * G' * inv(innovation_cov)
-	mean_update = mean(pred) + K * innovation
-	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
-	return MvNormal(mean_update, cov_update)
+	return observe(m, x, 1)
 end
 
 
-"""
-Extend a FilteredState 'on-line' when a new observation becomes available.
-This function enlarges the FilteredState, so may not be a good choice for
-applications where many new observations have to be assimilated very fast.
 
-#### Parameters
-- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
-- fs : A FilteredState object.
-- y : Vector of the latest observation at time t.
+# """
+# Refine a forecast state based on a new observation.
 
-#### Returns
-- fs : The FilteredState, extended with one more observation and state estimate.
-"""
-function update!(m::AbstractGaussianSSM, fs::FilteredState, y)
-	x_pred = predict(m, fs.state[end])
-	x_filt = update(m, x_pred, y)
-	push!(fs.state, x_filt)
-	fs.observations = [fs.observations y]
-	return fs
-end
+# #### Parameters
+# - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+# - pred : AbstractMvNormal.  Estimate of state at time t, given data up to t-1.
+# - y : Vector of the latest observation at time t.
+
+# #### Returns
+# - MvNormal distribution, representing the estimate of the state at time t given
+# all data up to t.
+# """
+# function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y::Vector,
+# 		t::Int)
+# 	G = observation_matrix(m, pred, t)
+# 	innovation = y - G * mean(pred)
+# 	innovation_cov = G * cov(pred) * G' + m.W(t)
+# 	K = cov(pred) * G' * inv(innovation_cov)
+# 	mean_update = mean(pred) + K * innovation
+# 	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
+# 	return MvNormal(mean_update, cov_update)
+# end
+
+# function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y::Vector)
+# 	return update(m, pred, y, 1)
+# end
+
+
+# """
+# Extend a FilteredState 'on-line' when a new observation becomes available.
+# This function enlarges the FilteredState, so may not be a good choice for
+# applications where many new observations have to be assimilated very fast.
+
+# #### Parameters
+# - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+# - fs : A FilteredState object.
+# - y : Vector of the latest observation at time t.
+
+# #### Returns
+# - fs : The FilteredState, extended with one more observation and state estimate.
+# """
+# function update!(m::AbstractGaussianSSM, fs::FilteredState, y::Vector,
+# 		u::Vector, t::Int)
+# 	x_pred = predict(m, fs.state[end], u, t-1)
+# 	x_filt = update(m, x_pred, y, t)
+# 	push!(fs.state, x_filt)
+# 	fs.observations = [fs.observations y]
+# end
+
 
 """
 Given a process/observation model and a set of data, estimate the states of the
@@ -224,20 +236,21 @@ Simulate a realization of a state-space process and observations of it.
 - (x, y) : Tuple of the process and observation arrays.
 """
 function simulate(m::AbstractGaussianSSM, n::Int64, x0::AbstractMvNormal)
-	F = process_matrix(m, x0)
-	G = observation_matrix(m, x0)
+	F = process_matrix(m, x0, 1)
+	G = observation_matrix(m, x0, 1)
 	x = zeros(size(F, 1), n)
 	y = zeros(size(G, 1), n)
-	x[:, 1] = rand(MvNormal(F * mean(x0), m.V))
-	y[:, 1] = rand(MvNormal(G * x[:, 1], m.W))
+	x[:, 1] = rand(MvNormal(F * mean(x0), m.V(1)))
+	y[:, 1] = rand(MvNormal(G * x[:, 1], m.W(1)))
 	for i in 2:n
-		F = process_matrix(m, x[:, i-1])
-		G = observation_matrix(m, x[:, i-1])
-		x[:, i] = F * x[:, i-1] + rand(MvNormal(m.V))
-		y[:, i] = G * x[:, i] + rand(MvNormal(m.W))
+		F = process_matrix(m, x[:, i-1], i)
+		G = observation_matrix(m, x[:, i-1], i)
+		x[:, i] = F * x[:, i-1] + rand(MvNormal(m.V(i)))
+		y[:, i] = G * x[:, i] + rand(MvNormal(m.W(i)))
 	end
 	return (x, y)
 end
+
 
 """
 Fit a state-space model to data using maximum likelihood.

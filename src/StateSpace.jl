@@ -10,7 +10,6 @@ export
 	AbstractGaussianSSM,
     AdditiveNonLinUKFSSM,
 	LinearGaussianSSM,
-	LinearGaussianCISSM,
 	NonlinearGaussianSSM,
 	FilteredState,
 	show,
@@ -25,8 +24,10 @@ export
 	loglikelihood,
 	simulate
 
+include("matrix_utils.jl")
+include("model_types.jl")
 include("common.jl")
-include("KalmanFilter.jl")
+include("kalman_filter.jl")
 include("ExtendedKalmanFilter.jl")
 include("UnscentedKalmanFilterAdditive.jl")
 
