@@ -74,7 +74,6 @@ control_input(m::LinearGaussianSSM, u, t::Int=1) = m.B(t) * u
 immutable NonlinearGaussianSSM <: AbstractGaussianSSM
     # Process transition function, jacobian, and noise covariance matrix
     f::Function
-    fjac::Function
     V::Function
 
     # Control input function
@@ -82,43 +81,39 @@ immutable NonlinearGaussianSSM <: AbstractGaussianSSM
 
     # Observation function, 
     g::Function # actual observation function
-    gjac::Function # function returning Jacobian of process
     W::Function
 
     nx::Int
     ny::Int
     nu::Int
 
-    function NonlinearGaussianSSM(f::Function, fjac::Function, V::Function,
-            b::Function, g::Function, gjac::Function, W::Function,
-            nx::Int, ny::Int, nu::Int)
+    function NonlinearGaussianSSM(f::Function, V::Function,
+            b::Function, g::Function, W::Function, nx::Int, ny::Int, nu::Int)
         @assert ispossemidef(V(1))
         @assert ispossemidef(W(1))
         @assert (nx, nx) == size(V(1))
         @assert (ny, ny) == size(W(1))
 
-        new(f, fjac, V, b, g, gjac, W, nx, ny, nu)
+        new(f, V, b, g, W, nx, ny, nu)
     end
 end
 
 function NonlinearGaussianSSM{T}(f::Function, V::Matrix{T}, g::Function,
         W::Matrix{T}; b::Function=_ -> 0, nu::Int=0)
-    fjac = jacobian(f)
-    gjac = jacobian(g)
     nx = size(V, 1)
     ny = size(W, 1)
 
-    return NonlinearGaussianSSM(f, fjac, _-> V, b, g, gjac, _-> W, nx, ny, nu)
+    return NonlinearGaussianSSM(f, _-> V, b, g, _-> W, nx, ny, nu)
 end
 
 
 ## Core methods
-process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Int=1) = m.fjac(x)
+process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Int=1) = jacobian(m.f, x)
 function process_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Int=1)
     return process_matrix(m, mean(x), t)
 end
 
-observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Int=1) = m.gjac(x)
+observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Int=1) = jacobian(m.g, x)
 function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Int=1) 
     return process_matrix(m, mean(x), t)
 end
