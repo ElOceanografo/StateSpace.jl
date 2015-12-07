@@ -1,5 +1,3 @@
-using Distributions
-import Distributions: mean, var, cov, rand
 
 
 """
@@ -70,8 +68,8 @@ Forecast the state of the process at the next time step.
 function predict(m::AbstractGaussianSSM, x::AbstractMvNormal;
 		u::Vector=zeros(m.nu), t::Int=1)
     F = process_matrix(m, x, t)
-    B = control_matrix(m, t)
-    return MvNormal(F * mean(x) + B * u, F * cov(x) * F' + m.V(t))
+    CI = control_input(m, u, t)
+    return MvNormal(F * mean(x) + CI, F * cov(x) * F' + m.V(t))
 end
 
 

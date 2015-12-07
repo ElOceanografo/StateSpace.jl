@@ -1,4 +1,7 @@
 module StateSpace
+using Distributions
+using ForwardDiff
+import Distributions: mean, var, cov, rand
 
 import Base: mean, filter, show
 import StatsBase: loglikelihood
@@ -27,8 +30,6 @@ export
 include("matrix_utils.jl")
 include("model_types.jl")
 include("common.jl")
-include("kalman_filter.jl")
-include("ExtendedKalmanFilter.jl")
-include("UnscentedKalmanFilterAdditive.jl")
+include("filter_types.jl")
 
 end # module

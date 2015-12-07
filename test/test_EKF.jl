@@ -54,7 +54,7 @@ fs = filter(mod, yy, x0)
 # end
 # readline()
 
-y_new = fs.observations[:, end] + randn(size(mod.V, 1)) / 10
+y_new = fs.observations[:, end] + randn(size(mod.V(1), 1)) / 10
 update!(mod, fs, y_new)
 
 ss = smooth(mod, fs)
