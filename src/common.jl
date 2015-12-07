@@ -1,61 +1,6 @@
 
 
 """
-Data structure representing the estimated state of a state-space model
-after filtering/smoothing.
-
-#### Fields
-- observations : Array of observations. Each column is  a single observation vector.
-- state : Array of (possibly multivariate) Distributions. Each distribution
-represents the estimate and uncertainty of the hidden state at that time.
-- loglik : The log-likelihood of the model, i.e. the probabilty of the observations
-given the model and state estimates.
-"""
-type FilteredState{T, D<:ContinuousMultivariateDistribution}
-	observations::Array{T, 2}
-	state::Array{D}
-	loglik::T
-end
-
-typealias SmoothedState FilteredState
-
-function show{T}(io::IO, fs::FilteredState{T})
-	n = length(fs.state)
-	dobs = size(fs.observations, 1)
-	dstate = length(fs.state[1])
-	println("FilteredState{$T}")
-	println("$n estimates of $dstate-D process from $dobs-D observations")
-	println("Log-likelihood: $(fs.loglik)")
-end
-
-function show{T}(io::IO, fs::SmoothedState{T})
-	n = length(fs.state)
-	dobs = size(fs.observations, 1)
-	dstate = length(fs.state[1])
-	println("SmoothedState{$T}")
-	println("$n estimates of $dstate-D process from $dobs-D observations")
-	println("Log-likelihood: $(fs.loglik)")
-end
-
-"""
-Returns the log-likelihood of the FilteredState object.
-"""
-loglikelihood(fs::FilteredState) = fs.loglik
-
-for op in (:mean, :var, :cov, :cor, :rand)
-	@eval begin
-		function ($op){T}(s::FilteredState{T})
-			result = Array(T, length(s.state[1]), length(s.state))
-			for i in 1:length(s.state)
-				result[:, i] = ($op)(s.state[i])
-			end
-			return result
-		end
-	end
-end
-
-
-"""
 Forecast the state of the process at the next time step.
 
 #### Parameters
@@ -165,26 +110,39 @@ This function only does forward-pass filtering--that is, the state estimate at t
 t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
 filtering, run `smooth` on the FilteredState produced by this function.
 """
-function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal)
+function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
+		u::Matrix{T}, filter::AbstractKalmanFilter)
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0.0
-	x_pred = predict(m, x0)
-	x_filtered[1] = update(m, x_pred, y[:, 1])
+	x_pred = predict(m, x0, u=u[:, 1], t=1)
+	x_filtered[1] = update(m, x_pred, y[:, 1], t=1, filter=filter)
 	loglik = logpdf(x_filtered[1], mean(x_pred)) +
 		logpdf(observe(m, x_filtered[1]), y[:,1])
 	for i in 2:size(y, 2)
-		x_pred = predict(m, x_filtered[i-1])
+		x_pred = predict(m, x_filtered[i-1], u=u[:, i], t=i)
 		# Check for missing values in observation
 		if any(isnan(y[:, i]))
 			x_filtered[i] = x_pred
 		else
-			x_filtered[i] = update(m, x_pred, y[:, i])
+			x_filtered[i] = update(m, x_pred, y[:, i], t=i, filter=filter)
 			loglik += logpdf(observe(m, x_filtered[i]), y[:, i])
 		end
 		loglik += logpdf(x_pred, mean(x_filtered[i]))
 	end
 	return FilteredState(y, x_filtered, loglik)
 end
+
+
+function filter{T}(m::LinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
+		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::LinearKalmanFilter=KF())
+	return _filter(m, y, x0, u, filter)
+end
+
+function filter{T}(m::NonlinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
+		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::NonlinearKalmanFilter=EKF())
+	return _filter(m, y, x0, u, filter)
+end
+
 
 """
 Given a process/observation model and a set of data, estimate the states of the
@@ -196,7 +154,7 @@ set, and initial state estimate, in which case it does the forward and backward
 passes at once.
 
 """
-function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
+function _smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	n = size(fs.observations, 2)
 	smooth_dist = Array(AbstractMvNormal, n)
 	smooth_dist[end] = fs.state[end]
@@ -218,10 +176,25 @@ function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	return SmoothedState(fs.observations, smooth_dist, loglik)
 end
 
-function smooth{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal)
-	fs = filter(m, y, x0)
-	return smooth(m, fs)
+
+function smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
+	return _smooth(m, fs)
 end
+
+## Linear Gaussian method
+function smooth{T}(m::LinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
+		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::LinearKalmanFilter=KF())
+	fs = filter(m, y, x0, u=u, filter=filter)
+	return _smooth(m, fs)
+end
+
+## Nonlinear Gaussian method
+function smooth{T}(m::NonlinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
+		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::NonlinearKalmanFilter=EKF())
+	fs = filter(m, y, x0, u=u, filter=filter)
+	return _smooth(m, fs)
+end
+
 
 """
 Simulate a realization of a state-space process and observations of it.

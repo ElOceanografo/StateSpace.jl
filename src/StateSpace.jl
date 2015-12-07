@@ -29,7 +29,8 @@ export
 
 include("matrix_utils.jl")
 include("model_types.jl")
-include("common.jl")
+include("filtered_states.jl")
 include("filter_types.jl")
+include("common.jl")
 
 end # module

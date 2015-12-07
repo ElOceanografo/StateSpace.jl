@@ -1,7 +1,9 @@
 abstract AbstractStateSpaceFilter
 
-abstract LinearKalmanFilter <: AbstractStateSpaceFilter
-abstract NonlinearKalmanFilter <: AbstractStateSpaceFilter
+abstract AbstractKalmanFilter <: AbstractStateSpaceFilter
+abstract LinearKalmanFilter <: AbstractKalmanFilter
+abstract NonlinearKalmanFilter <: AbstractKalmanFilter
+abstract NonlinearFilter <: AbstractStateSpaceFilter
 
 ######################################################################
 # Kalman filter
@@ -57,3 +59,13 @@ function update!(m::NonlinearGaussianSSM, fs::FilteredState, y::Vector;
 	push!(fs.state, x_filt)
 	fs.observations = [fs.observations y]
 end
+
+
+# LinearGaussianSSM 		LinearKalmanFilter
+# 						NonlinearKalmanFilter
+# 						NonlinearFilter
+
+# NonlinearGaussianSSM	NonlinearKalmanFilter
+# 						NonlinearFilter
+
+# NonlinearSSM 			NonlinearFilter
