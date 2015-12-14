@@ -1,5 +1,3 @@
-
-
 """
 Data structure representing the estimated state of a state-space model
 after filtering/smoothing.

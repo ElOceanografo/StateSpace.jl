@@ -1,5 +1,3 @@
-
-
 """
 Forecast the state of the process at the next time step.
 
@@ -37,57 +35,6 @@ end
 function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
 	return observe(m, x, 1)
 end
-
-
-
-# """
-# Refine a forecast state based on a new observation.
-
-# #### Parameters
-# - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
-# - pred : AbstractMvNormal.  Estimate of state at time t, given data up to t-1.
-# - y : Vector of the latest observation at time t.
-
-# #### Returns
-# - MvNormal distribution, representing the estimate of the state at time t given
-# all data up to t.
-# """
-# function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y::Vector,
-# 		t::Int)
-# 	G = observation_matrix(m, pred, t)
-# 	innovation = y - G * mean(pred)
-# 	innovation_cov = G * cov(pred) * G' + m.W(t)
-# 	K = cov(pred) * G' * inv(innovation_cov)
-# 	mean_update = mean(pred) + K * innovation
-# 	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
-# 	return MvNormal(mean_update, cov_update)
-# end
-
-# function update(m::AbstractGaussianSSM, pred::AbstractMvNormal, y::Vector)
-# 	return update(m, pred, y, 1)
-# end
-
-
-# """
-# Extend a FilteredState 'on-line' when a new observation becomes available.
-# This function enlarges the FilteredState, so may not be a good choice for
-# applications where many new observations have to be assimilated very fast.
-
-# #### Parameters
-# - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
-# - fs : A FilteredState object.
-# - y : Vector of the latest observation at time t.
-
-# #### Returns
-# - fs : The FilteredState, extended with one more observation and state estimate.
-# """
-# function update!(m::AbstractGaussianSSM, fs::FilteredState, y::Vector,
-# 		u::Vector, t::Int)
-# 	x_pred = predict(m, fs.state[end], u, t-1)
-# 	x_filt = update(m, x_pred, y, t)
-# 	push!(fs.state, x_filt)
-# 	fs.observations = [fs.observations y]
-# end
 
 
 """

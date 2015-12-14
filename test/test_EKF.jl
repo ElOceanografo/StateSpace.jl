@@ -1,6 +1,6 @@
 using StateSpace
 
-println("Testing ExtendedKalmanFilter.jl...")
+println("Testing Extended Kalman Filter...")
 
 # Define process model: Ricker growth model, with two populations
 r1 = 0.03 							# 10% intrinsic growth rate for pop 1

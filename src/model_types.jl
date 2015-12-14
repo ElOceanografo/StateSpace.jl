@@ -1,7 +1,16 @@
-
 abstract AbstractStateSpaceModel
 typealias AbstractSSM AbstractStateSpaceModel
 abstract AbstractGaussianSSM <: AbstractStateSpaceModel
+
+# LinearGaussianSSM     LinearKalmanFilter
+#                       NonlinearKalmanFilter
+#                       NonlinearFilter
+#
+# NonlinearGaussianSSM  NonlinearKalmanFilter
+#                       NonlinearFilter
+#
+# NonlinearSSM          NonlinearFilter
+
 
 ###########################################################################
 # Linear Gaussian 

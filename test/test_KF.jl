@@ -2,7 +2,7 @@ using StateSpace
 using Distributions
 using Base.Test
 
-println("Testing KalmanFilter.jl...")
+println("Testing Kalman Filter...")
 
 function random_cov(n)
 	A = rand(n, n)
