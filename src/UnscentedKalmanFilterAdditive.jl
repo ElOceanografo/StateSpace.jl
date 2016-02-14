@@ -14,11 +14,6 @@ type AdditiveNonLinUKFSSM{T} <: AbstractSSM
 	W::Matrix{T} # Observation covariance
 end
 
-function AdditiveNonLinUKFSSM{T}(f::Function, V::Matrix{T},
-		g::Function, W::Matrix{T})
-    return AdditiveNonLinUKFSSM{T}(f, V, g, W)
-end
-
 """
 Data structure containing the parameters required to place the sigma points for the Unscented Kalman Filter
 
