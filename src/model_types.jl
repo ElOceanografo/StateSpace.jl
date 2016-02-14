@@ -79,7 +79,6 @@ control_input(m::LinearGaussianSSM, u, t::Int=1) = m.B(t) * u
 # Noninear Gaussian 
 ###########################################################################
 
-
 immutable NonlinearGaussianSSM <: AbstractGaussianSSM
     # Process transition function, jacobian, and noise covariance matrix
     f::Function
@@ -128,3 +127,5 @@ function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Int
 end
 
 control_input(m::NonlinearGaussianSSM, u, t::Int=1) = m.b(u)
+
+

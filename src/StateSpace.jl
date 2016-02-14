@@ -8,12 +8,28 @@ import StatsBase: loglikelihood
 
 
 export
+	# model types
 	AbstractStateSpaceModel,
 	AbstractSSM,
 	AbstractGaussianSSM,
-    AdditiveNonLinUKFSSM,
 	LinearGaussianSSM,
 	NonlinearGaussianSSM,
+	NonlinearSSM,
+	# filter types
+	AbstractStateSpaceFilter,
+	AbstractKalmanFilter,
+	LinearKalmanFilter,
+	NonlinearKalmanFilter,
+	NonlinearFilter,
+	KalmanFilter,
+	KF,
+	ExtendedKalmanFilter,
+	EKF,
+	UnscentedKalmanFilter,
+	UKF,
+	ParticleFilter,
+
+
 	FilteredState,
 	show,
 	process_matrix,
@@ -32,5 +48,6 @@ include("model_types.jl")
 include("filtered_states.jl")
 include("filter_types.jl")
 include("common.jl")
+include("particle_filter.jl")
 
 end # module

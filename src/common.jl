@@ -27,15 +27,10 @@ Observe the state process with uncertainty.
 - MvNormal distribution, representing the probability of recording any
 particular observation data.
 """
-function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Int)
+function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Int=1)
 	G = observation_matrix(m, x, t)
 	return MvNormal(G * mean(x), G * cov(x) * G' + m.W(t))
 end
-
-function observe(m::AbstractGaussianSSM, x::AbstractMvNormal)
-	return observe(m, x, 1)
-end
-
 
 """
 Given a process/observation model and a set of data, estimate the states of the
@@ -62,7 +57,7 @@ function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0.0
 	x_pred = predict(m, x0, u=u[:, 1], t=1)
-	x_filtered[1] = update(m, x_pred, y[:, 1], t=1, filter=filter)
+	x_filtered[1] = update(m, x_pred, y[:, 1], filter, 1)
 	loglik = logpdf(x_filtered[1], mean(x_pred)) +
 		logpdf(observe(m, x_filtered[1]), y[:,1])
 	for i in 2:size(y, 2)
@@ -71,7 +66,7 @@ function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 		if any(isnan(y[:, i]))
 			x_filtered[i] = x_pred
 		else
-			x_filtered[i] = update(m, x_pred, y[:, i], t=i, filter=filter)
+			x_filtered[i] = update(m, x_pred, y[:, i], filter, i)
 			loglik += logpdf(observe(m, x_filtered[i]), y[:, i])
 		end
 		loglik += logpdf(x_pred, mean(x_filtered[i]))

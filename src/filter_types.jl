@@ -6,8 +6,6 @@ abstract NonlinearKalmanFilter <: AbstractKalmanFilter
 abstract NonlinearFilter <: AbstractStateSpaceFilter
 
 # LinearGaussianSSM 	LinearKalmanFilter
-# 						NonlinearKalmanFilter
-# 						NonlinearFilter
 #
 # NonlinearGaussianSSM	NonlinearKalmanFilter
 # 						NonlinearFilter
@@ -22,26 +20,31 @@ type KalmanFilter <: LinearKalmanFilter end
 typealias KF KalmanFilter
 
 ## methods
-function update_kalman(m::AbstractGaussianSSM, pred::AbstractMvNormal,
-	y::Vector, t::Int)
-	G = observation_matrix(m, pred, t)
-	innovation = y - G * mean(pred)
-	innovation_cov = G * cov(pred) * G' + m.W(t)
-	K = cov(pred) * G' * inv(innovation_cov)
-	mean_update = mean(pred) + K * innovation
-	cov_update = (eye(cov(pred)) - K * G) * cov(pred)
-	return MvNormal(mean_update, cov_update)
+
+# basic Kalman update, once we have the predicted state, an observation,
+# and the observation matrix/covariance.
+function update_kalman(pred, y, G, W)
+    innovation = y - G * mean(pred)
+    innovation_cov = G * cov(pred) * G' + W
+    K = cov(pred) * G' * inv(innovation_cov)
+    mean_update = mean(pred) + K * innovation
+    cov_update = (eye(cov(pred)) - K * G) * cov(pred)
+    return MvNormal(mean_update, cov_update)
 end
 
-function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector;
-		t::Int=1, filter::KalmanFilter=KalmanFilter())
-	return update_kalman(m, pred, y, t)
+function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector,
+		filter::KalmanFilter=KalmanFilter(), t::Int=1)
+	return update_kalman(pred, y, m.G(t), m.W(t))
+end
+
+function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector, t::Int=1)
+    return update(m, pred, y, KalmanFilter(), t)
 end
 
 function update!(m::LinearGaussianSSM, fs::FilteredState, y::Vector;
-		u::Vector=zeros(m.nu), t::Int=1, filter::KalmanFilter=KalmanFilter())
+		u::Vector=zeros(m.nu), filter::KalmanFilter=KalmanFilter(), t::Int=1)
 	x_pred = predict(m, fs.state[end], u=u, t=t-1)
-	x_filt = update_kalman(m, x_pred, y, t)
+	x_filt = update_kalman(x_pred, y, m.G(t), m.W(t))
 	push!(fs.state, x_filt)
 	fs.observations = [fs.observations y]
 end
@@ -55,16 +58,19 @@ typealias EKF ExtendedKalmanFilter
 
 
 ## methods
-
-function update(m::NonlinearGaussianSSM, pred::AbstractMvNormal, y::Vector;
-		t::Int=1, filter::NonlinearKalmanFilter=EKF())
-	return update_kalman(m, pred, y, t)
+function update(m::NonlinearGaussianSSM, pred::AbstractMvNormal, y::Vector,
+		filter::NonlinearKalmanFilter=EKF(), t::Int=1)
+    G = observation_matrix(m, pred, t)
+    W = m.W(t)
+	return update_kalman(pred, y, G, W)
 end
 
 function update!(m::NonlinearGaussianSSM, fs::FilteredState, y::Vector;
-		u::Vector=zeros(m.nu), t::Int=1, filter::NonlinearKalmanFilter=EKF())
+		u::Vector=zeros(m.nu), filter::NonlinearKalmanFilter=EKF(), t::Int=1)
 	x_pred = predict(m, fs.state[end], u=u, t=t-1)
-	x_filt = update_kalman(m, x_pred, y, t)
+    G = observation_matrix(m, x_pred, t)
+    W = m.W(t)
+	x_filt = update_kalman(x_pred, y, G, W)
 	push!(fs.state, x_filt)
 	fs.observations = [fs.observations y]
 end
@@ -142,10 +148,10 @@ Function to calculate the predicted mean and the predicted covariance given a UK
 
 `timeUpdate(m, sp)`
 #### Parameters
-- `m` : NonlinearGaussianSSM type containing the parameters of the Unscented Kalman Filter model.
+- `m` : AbstractGaussianSSM type containing the parameters of the Unscented Kalman Filter model.
 - `sp` : SigmaPoints type containing the matrix of sigma vectors and their corresponding weights
 """
-function timeUpdate(m::NonlinearGaussianSSM, sp::SigmaPoints)
+function timeUpdate(m::AbstractGaussianSSM, sp::SigmaPoints)
     L, M  = size(sp.χ)
     χ_x = zeros(L, M)
     x_pred = zeros(L)
@@ -161,14 +167,14 @@ function timeUpdate(m::NonlinearGaussianSSM, sp::SigmaPoints)
     return MvNormal(x_pred, p_pred), SigmaPoints(χ_x, sp.wm, sp.wc)
 end
 
-function predict(m::NonlinearGaussianSSM, x::AbstractMvNormal, filter::UKF)
+function predict(m::AbstractGaussianSSM, x::AbstractMvNormal, filter::UKF)
     sigPoints = calcSigmaPoints(x, filter)
     pred_state, new_sigPoints = timeUpdate(m, sigPoints)
     return pred_state, new_sigPoints
 end
 
 
-function update(m::NonlinearGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
+function update(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
     obsLength = length(y)
     L, M = size(sp.χ)
     y_trans = zeros(obsLength, M)
@@ -194,7 +200,7 @@ function update(m::NonlinearGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y
     return MvNormal(new_x, new_cov)
 end
 
-function filter{T}(m::NonlinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
+function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 	filter::UKF=UKF())
     x_filtered = Array(AbstractMvNormal, size(y, 2))
     loglik = 0.0 #NEED TO SORT OUT LOGLIKELIHOOD FOR UKF

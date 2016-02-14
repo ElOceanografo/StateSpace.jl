@@ -1,4 +1,4 @@
-println("Testing UnscentedKalmanFilter...")
+println("Testing Unscented Kalman Filter...")
 
 Δt = 0.1 # Set the time step
 
@@ -63,4 +63,4 @@ filtered_state = filter(ukfStateModel, noisyObs, initial_guess)
 ################################################################################
 
 
-println("UnscentedKalmanFilterAdditive.jl passed.\n")
+println("Unscented Kalman Filter passed.\n")

@@ -52,4 +52,4 @@ ss = smooth(m, fs)
 @assert loglikelihood(fs) < loglikelihood(ss)
 
 
-println("KalmanFilter.jl passed.\n")
+println("Kalman Filter passed.\n")

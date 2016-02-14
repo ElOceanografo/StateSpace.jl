@@ -62,4 +62,4 @@ ss = smooth(mod, fs)
 @assert loglikelihood(fs) < loglikelihood(ss)
 
 
-println("ExtendedKalmanFilter.jl passed.\n")
+println("Extended Kalman Filter passed.\n")
