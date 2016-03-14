@@ -27,6 +27,8 @@ export
 	EKF,
 	UnscentedKalmanFilter,
 	UKF,
+	EnsembleKalmanFilter,
+	EnKF,
 	ParticleFilter,
 
 

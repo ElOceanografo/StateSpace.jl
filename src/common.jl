@@ -9,7 +9,7 @@ Forecast the state of the process at the next time step.
 - MvNormal distribution representing the forecast and its associated uncertainty.
 """
 function predict(m::AbstractGaussianSSM, x::AbstractMvNormal;
-		u::Vector=zeros(m.nu), t::Int=1)
+		u::Array=zeros(m.nu), t::Int=1)
     F = process_matrix(m, x, t)
     CI = control_input(m, u, t)
     return MvNormal(F * mean(x) + CI, F * cov(x) * F' + m.V(t))
@@ -53,7 +53,7 @@ t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
 filtering, run `smooth` on the FilteredState produced by this function.
 """
 function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
-		u::Matrix{T}, filter::AbstractKalmanFilter)
+		u::Array{T}, filter::AbstractKalmanFilter)
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0.0
 	x_pred = predict(m, x0, u=u[:, 1], t=1)

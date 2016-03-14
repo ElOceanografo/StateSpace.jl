@@ -36,14 +36,14 @@ observe(mod, ensemble, yy[:, 1])
 
 ensemble_new = update(mod, ensemble, yy[:, 1], filt)
 
-scatter(xx[1,1], xx[3,1])
-plot(ensemble[1,:]', ensemble[3, :]', "k+")
-plot(ensemble_new[1,:]', ensemble_new[3, :]', "r.")
+# scatter(xx[1,1], xx[3,1])
+# plot(ensemble[1,:]', ensemble[3, :]', "k+")
+# plot(ensemble_new[1,:]', ensemble_new[3, :]', "r.")
 
 fs = filter(mod, yy, ensemble_0, filt)
 
 fs_mean = mean(fs, 2)
-plot(fs_mean[1,:]', fs_mean[3,:]')
+# plot(fs_mean[1,:]', fs_mean[3,:]')
 
 
 println("Particle filter passed.")
