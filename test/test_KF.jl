@@ -2,7 +2,7 @@ using StateSpace
 using Distributions
 using Base.Test
 
-println("Testing KalmanFilter.jl...")
+println("Testing Kalman Filter...")
 
 function random_cov(n)
 	A = rand(n, n)
@@ -24,7 +24,7 @@ x0 = MvNormal(randn(4), diagm(ones(4) * 100.0))
 x1 = predict(m, x0)
 # println(mean(x1))
 
-y1 = m.G * mean(x1) + randn(2) / 10
+y1 = m.G(1) * mean(x1) + randn(2) / 10
 u1 = update(m, x1, y1)
 # println(mean(u1))
 
@@ -52,4 +52,4 @@ ss = smooth(m, fs)
 @assert loglikelihood(fs) < loglikelihood(ss)
 
 
-println("KalmanFilter.jl passed.\n")
+println("Kalman Filter passed.\n")

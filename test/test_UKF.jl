@@ -1,4 +1,4 @@
-println("Testing UnscentedKalmanFilterAdditive.jl...")
+println("Testing Unscented Kalman Filter...")
 
 Δt = 0.1 # Set the time step
 
@@ -21,7 +21,7 @@ processCovariance = 1e-2*[0.1 0;
 observationCovariance = 1e-1*eye(2)
 
 #Create additive noise UKF model
-ukfStateModel = AdditiveNonLinUKFSSM(processFunction, processCovariance,
+ukfStateModel = NonlinearGaussianSSM(processFunction, processCovariance,
 observationFunction, observationCovariance)
 #End Section: Set the Unscented Kalman Filter Parameters
 ################################################################################
@@ -63,4 +63,4 @@ filtered_state = filter(ukfStateModel, noisyObs, initial_guess)
 ################################################################################
 
 
-println("UnscentedKalmanFilterAdditive.jl passed.\n")
+println("Unscented Kalman Filter passed.\n")

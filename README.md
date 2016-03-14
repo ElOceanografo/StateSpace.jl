@@ -56,13 +56,13 @@ Given a current estimate of the state, where do we expect it to be at the next t
 
 #### Updating/filtering
 
-Given a predicted state and a new observation, how do we combine the prediction with the new data to get a better (or optimal) estimate of the state? This can be done either "on line," i.e. one step at a time as each new measurement arrives, or all at once after all the data have been collected.
+Given a predicted state and a new observation, how do we combine the prediction with the new data to get a better (or optimal) estimate of the state? This can be done either "on line," i.e. one step at a time as each new measurement arrives, or all at once after all the data have been collected.  Different filter types are available to apply different algorithms (Kalman, extended Kalman, etc.).
 
--	`update(model, predicted_state, data)`
+-	`update(model, predicted_state, data, filter)`
 
--	`update!(model, filtered_states, data)`
+-	`update!(model, filtered_states, data, filter)`
 
--	`filter(model, data, state0)`
+-	`filter(model, data, state0, filter)`
 
 #### Smoothing
 
@@ -72,11 +72,13 @@ Given a full set of filtered state estimates and a full data set, go back and re
 
 ### Algorithms already implemented:
 
--	The Kalman[[1]](1) filter. This is a fast and optimal technique for linear systems with Gaussian process noise and observational error.
+-	The Kalman[[1]](1) filter (KF). This is a fast and optimal technique for linear systems with Gaussian process noise and observational error.
 
--	The extended Kalman filter. This method can be applied to nonlinear problems with Gaussian noise and error. It works by linearizing the equations around the current state estimate, calculating the required Jacobians automagically using [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
+-	The extended Kalman filter (EKF). This method can be applied to nonlinear problems with Gaussian noise and error. It works by linearizing the equations around the current state estimate, calculating the required Jacobians automagically using [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl).
 
-- The unscented Kalman filter for additive noise. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution. 
+- The unscented Kalman filter for additive noise. This method can be applied to nonlinear problems with additive noise and error. This method works by transforming a set of specially placed points (known as sigma points) to describe the statistics of a transformed distribution.
+
+- The ensemble Kalman filter (EnKF).  An ensemble of replicate states are modeled simultaneously, with each being propagated indepentently of the others.  The errors are estimated from the covariance of the multiple state estimates from the ensemble.
 
 ### Algorithms on the way:
 
