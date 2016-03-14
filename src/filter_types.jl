@@ -214,7 +214,10 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
             x_filtered[i] = x_pred
         else
             x_filtered[i] = update(m, x_pred, sigma_points, y[:, i])
+            loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y[:, 1])[1],
+            y[:, 1])
         end
+        loglik += logpdf(x_pred, mean(x_filtered[i+1]))
 	end
 	return FilteredState(y, x_filtered, loglik, false)
 end
@@ -231,7 +234,7 @@ typealias EnKF EnsembleKalmanFilter
 EnsembleKalmanFilter() = EnsembleKalmanFilter(100)
 
 
-function predict(m::AbstractGaussianSSM, ensemble::Matrix, filter::EnKF=EnKF(); 
+function predict(m::AbstractGaussianSSM, ensemble::Matrix, filter::EnKF=EnKF();
         u::Vector=zeros(m.nu), t::Int=1)
     ensemble_new = similar(ensemble)
     CI = control_input(m, u, t)
