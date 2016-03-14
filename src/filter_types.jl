@@ -152,7 +152,7 @@ Function to calculate the predicted mean and the predicted covariance given a UK
 - `m` : AbstractGaussianSSM type containing the parameters of the Unscented Kalman Filter model.
 - `sp` : SigmaPoints type containing the matrix of sigma vectors and their corresponding weights
 """
-function timeUpdate(m::AbstractGaussianSSM, sp::SigmaPoints)
+function timeUpdate(m::AbstractGaussianSSM, sp::SigmaPoints, t::Int=1)
     L, M  = size(sp.χ)
     χ_x = zeros(L, M)
     x_pred = zeros(L)
@@ -164,7 +164,7 @@ function timeUpdate(m::AbstractGaussianSSM, sp::SigmaPoints)
     for i in 1:2L+1
         p_pred += sp.wc[i] * (χ_x[:,i] - x_pred)*(χ_x[:,i] - x_pred)'
     end
-    p_pred += m.V
+    p_pred += m.V(t)
     return MvNormal(x_pred, p_pred), SigmaPoints(χ_x, sp.wm, sp.wc)
 end
 
@@ -174,13 +174,11 @@ function predict(m::AbstractGaussianSSM, x::AbstractMvNormal, filter::UKF)
     return pred_state, new_sigPoints
 end
 
-
-function update(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
+function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y, t::Int=1)
     obsLength = length(y)
     L, M = size(sp.χ)
     y_trans = zeros(obsLength, M)
     y_pred = zeros(obsLength)
-    x_pred = mean(x)
     for i in 1:2L+1
         y_trans[:,i] = m.g(sp.χ[:,i])
         y_pred += sp.wm[i] * y_trans[:,i]
@@ -190,22 +188,30 @@ function update(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y)
     P_yy = zeros(obsLength, obsLength)
     for i in 1:2L+1
         resy = (y_trans[:,i] - y_pred)
-        P_xy += sp.wc[i] * (sp.χ[:,i] - x_pred) * resy'
+        P_xy += sp.wc[i] * (sp.χ[:,i] - mean(x)) * resy'
         P_yy += sp.wc[i] * resy * resy'
     end
-    P_yy += m.W
-    kalmanGain = P_xy * inv(P_yy)
-    new_x = x_pred + kalmanGain * (y - y_pred)
-    new_cov = cov(x) - kalmanGain * P_yy * kalmanGain'
+    P_yy += m.W(t)
+    return MvNormal(y_pred, P_yy), P_xy
+end
 
+function innovate(m::AbstractGaussianSSM, x::AbstractMvNormal, yPred::AbstractMvNormal, P_xy::Matrix, sp::SigmaPoints, y::Vector)
+    kalmanGain = P_xy * inv(cov(yPred))
+    new_x = mean(x) + kalmanGain * (y - mean(yPred))
+    new_cov = cov(x) - kalmanGain * cov(yPred) * kalmanGain'
     return MvNormal(new_x, new_cov)
+end
+
+function update(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y::Vector)
+    yPred, P_xy = observe(m, x, sp, y)
+    return innovate(m, x, yPred, P_xy, sp, y)
 end
 
 function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 	filter::UKF=UKF())
     x_filtered = Array(AbstractMvNormal, size(y, 2))
-    loglik = 0.0 #NEED TO SORT OUT LOGLIKELIHOOD FOR UKF
-	x_pred, sigma_points = predict(m, x0, filtder)
+    loglik = 0.0
+	x_pred, sigma_points = predict(m, x0, filter)
 	x_filtered[1] = update(m, x_pred, sigma_points, y[:, 1])
 	for i in 2:size(y, 2)
 		x_pred, sigma_points = predict(m, x_filtered[i-1], filter)
@@ -214,10 +220,9 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
             x_filtered[i] = x_pred
         else
             x_filtered[i] = update(m, x_pred, sigma_points, y[:, i])
-            loglik += logpdf(observe(m, x_filtered[i+1], calcSigmaPoints(x_filtered[i+1], params), y[:, 1])[1],
-            y[:, 1])
+            loglik += logpdf(observe(m, x_filtered[i], calcSigmaPoints(x_filtered[i], filter.α, filter.β, filter.κ), y[:, 1])[1], y[:, 1])
         end
-        loglik += logpdf(x_pred, mean(x_filtered[i+1]))
+        loglik += logpdf(x_pred, mean(x_filtered[i]))
 	end
 	return FilteredState(y, x_filtered, loglik, false)
 end
