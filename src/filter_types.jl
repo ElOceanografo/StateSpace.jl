@@ -216,7 +216,7 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
             x_filtered[i] = update(m, x_pred, sigma_points, y[:, i])
         end
 	end
-	return FilteredState(y, x_filtered, loglik)
+	return FilteredState(y, x_filtered, loglik, false)
 end
 
 ######################################################################
@@ -288,6 +288,6 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
                 loglik += logpdf(observe(m, x_filtered[i]), y[:,1])
             end
         end
-        return FilteredState(y, x_filtered, loglik)
+        return FilteredState(y, x_filtered, loglik, false)
     end
 end

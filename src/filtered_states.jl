@@ -8,11 +8,13 @@ after filtering/smoothing.
 represents the estimate and uncertainty of the hidden state at that time.
 - loglik : The log-likelihood of the model, i.e. the probabilty of the observations
 given the model and state estimates.
+- smoothed : Bool. Whether the state has been smoothed, or just filtered.
 """
 type FilteredState{T, D<:ContinuousMultivariateDistribution}
 	observations::Array{T, 2}
 	state::Array{D}
 	loglik::T
+	smoothed::Bool
 end
 
 
@@ -20,8 +22,9 @@ function show{T}(io::IO, fs::FilteredState{T})
 	n = length(fs.state)
 	dobs = size(fs.observations, 1)
 	dstate = length(fs.state[1])
+	s = ifelse(fs.smoothed, "smoothed", "filtered")
 	println("FilteredState{$T}")
-	println("$n estimates of $dstate-D process from $dobs-D observations")
+	println("$n $s estimates of $dstate-D process from $dobs-D observations")
 	println("Log-likelihood: $(fs.loglik)")
 end
 

@@ -71,7 +71,7 @@ function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 		end
 		loglik += logpdf(x_pred, mean(x_filtered[i]))
 	end
-	return FilteredState(y, x_filtered, loglik)
+	return FilteredState(y, x_filtered, loglik, false)
 end
 
 
@@ -115,7 +115,7 @@ function _smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
 		end
 	end
-	return FilteredState(fs.observations, smooth_dist, loglik)
+	return FilteredState(fs.observations, smooth_dist, loglik, true)
 end
 
 
