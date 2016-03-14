@@ -40,7 +40,7 @@ processCovariance = 1e-2*[0.1 0;
 observationCovariance = 1e-1*eye(2)
 
 #Create additive noise UKF model
-ukfStateModel = AdditiveNonLinUKFSSM(processFunction, processCovariance,
+ukfStateModel = NonlinearGaussianSSM(processFunction, processCovariance,
 observationFunction, observationCovariance)
 #End Section: Set the Unscented Kalman Filter Parameters
 ################################################################################
@@ -77,7 +77,7 @@ initial_guess = MvNormal([0.0,5.0], 5.0*eye(2))
 ################################################################################
 #Section: Execute the Additive noise Unscented Kalman Filter
 #-------------------------------------------------------------------------------
-filtered_state = filter(ukfStateModel, noisyObs, initial_guess)
+filtered_state = filter(ukfStateModel, noisyObs, initial_guess, UKF())
 #End Section: Execute the Additive noise Unscented Kalman Filter
 ################################################################################
 
