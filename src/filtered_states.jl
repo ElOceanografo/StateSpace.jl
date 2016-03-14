@@ -15,7 +15,6 @@ type FilteredState{T, D<:ContinuousMultivariateDistribution}
 	loglik::T
 end
 
-typealias SmoothedState FilteredState
 
 function show{T}(io::IO, fs::FilteredState{T})
 	n = length(fs.state)
@@ -26,14 +25,6 @@ function show{T}(io::IO, fs::FilteredState{T})
 	println("Log-likelihood: $(fs.loglik)")
 end
 
-function show{T}(io::IO, fs::SmoothedState{T})
-	n = length(fs.state)
-	dobs = size(fs.observations, 1)
-	dstate = length(fs.state[1])
-	println("SmoothedState{$T}")
-	println("$n estimates of $dstate-D process from $dobs-D observations")
-	println("Log-likelihood: $(fs.loglik)")
-end
 
 """
 Returns the log-likelihood of the FilteredState object.

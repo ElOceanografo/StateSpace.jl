@@ -115,7 +115,7 @@ function _smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
 		end
 	end
-	return SmoothedState(fs.observations, smooth_dist, loglik)
+	return FilteredState(fs.observations, smooth_dist, loglik)
 end
 
 
