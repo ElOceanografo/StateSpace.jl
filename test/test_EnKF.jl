@@ -38,12 +38,10 @@ filt = EnKF()
 fs = filter(mod, yy, x0, filt)
 fs_ensemble = filter(mod, yy, x0, filt, return_ensemble=true)
 @assert size(fs_ensemble) == (mod.nx, filt.nparticles, size(yy, 2))
-
 y_new = fs.observations[:, end] + randn(size(mod.V(1), 1)) / 10
 update!(mod, fs, y_new)
 
 ss = smooth(mod, fs)
-
 @assert loglikelihood(fs) < loglikelihood(ss)
 
 

@@ -67,16 +67,16 @@ function show(io::IO, mod::LinearGaussianSSM)
 end
 
 ## Core methods
-process_matrix(m::LinearGaussianSSM, state::Vector, t::Int=1) = m.F(t)
-process_matrix(m::LinearGaussianSSM, state::AbstractMvNormal, t::Int=1) = m.F(t)
+process_matrix(m::LinearGaussianSSM, state::Vector, t::Real=0.0) = m.F(t)
+process_matrix(m::LinearGaussianSSM, state::AbstractMvNormal, t::Real=0.0) = m.F(t)
 
-observation_matrix(m::LinearGaussianSSM, state::Vector, t::Int=1) = m.G(t)
-observation_matrix(m::LinearGaussianSSM, state::AbstractMvNormal, t::Int=1) = m.G(t)
+observation_matrix(m::LinearGaussianSSM, state::Vector, t::Real=0.0) = m.G(t)
+observation_matrix(m::LinearGaussianSSM, state::AbstractMvNormal, t::Real=0.0) = m.G(t)
 
-control_input(m::LinearGaussianSSM, u, t::Int=1) = m.B(t) * u
+control_input(m::LinearGaussianSSM, u, t::Real=0.0) = m.B(t) * u
 
 ###########################################################################
-# Noninear Gaussian 
+# Nonlinear Gaussian 
 ###########################################################################
 
 immutable NonlinearGaussianSSM <: AbstractGaussianSSM
@@ -116,16 +116,16 @@ end
 
 
 ## Core methods
-process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Int=1) = jacobian(m.f, x)
-function process_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Int=1)
+process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = jacobian(m.f, x)
+function process_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
     return process_matrix(m, mean(x), t)
 end
 
-observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Int=1) = jacobian(m.g, x)
-function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Int=1) 
+observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = jacobian(m.g, x)
+function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0) 
     return process_matrix(m, mean(x), t)
 end
 
-control_input(m::NonlinearGaussianSSM, u, t::Int=1) = m.b(u)
+control_input(m::NonlinearGaussianSSM, u, t::Real=0.0) = m.b(u)
 
 

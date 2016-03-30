@@ -33,17 +33,17 @@ function update_kalman(pred, y, G, W)
 end
 
 function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector,
-		filter::KalmanFilter=KalmanFilter(), t::Int=1)
+		filter::KalmanFilter=KalmanFilter(), t::Real=0.0)
 	return update_kalman(pred, y, m.G(t), m.W(t))
 end
 
-function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector, t::Int=1)
+function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector, t::Real=0.0)
     return update(m, pred, y, KalmanFilter(), t)
 end
 
 function update!(m::LinearGaussianSSM, fs::FilteredState, y::Vector;
-		u::Vector=zeros(m.nu), filter::KalmanFilter=KalmanFilter(), t::Int=1)
-	x_pred = predict(m, fs.state[end], u=u, t=t-1)
+		u::Vector=zeros(m.nu), filter::KalmanFilter=KalmanFilter(), t::Real=0.0)
+	x_pred = predict(m, fs.state[end], u=u, t=t)
 	x_filt = update_kalman(x_pred, y, m.G(t), m.W(t))
 	push!(fs.state, x_filt)
 	fs.observations = [fs.observations y]
@@ -60,14 +60,14 @@ typealias EKF ExtendedKalmanFilter
 ## methods
 
 function update(m::NonlinearGaussianSSM, pred::AbstractMvNormal, y::Vector,
-		filter::NonlinearKalmanFilter=EKF(), t::Int=1)
+		filter::NonlinearKalmanFilter=EKF(), t::Real=0.0)
     G = observation_matrix(m, pred, t)
     W = m.W(t)
 	return update_kalman(pred, y, G, W)
 end
 
 function update!(m::NonlinearGaussianSSM, fs::FilteredState, y::Vector;
-		u::Vector=zeros(m.nu), filter::NonlinearKalmanFilter=EKF(), t::Int=1)
+		u::Vector=zeros(m.nu), filter::NonlinearKalmanFilter=EKF(), t::Real=0.0)
 	x_pred = predict(m, fs.state[end], u=u, t=t-1)
     G = observation_matrix(m, x_pred, t)
     W = m.W(t)
@@ -152,7 +152,7 @@ Function to calculate the predicted mean and the predicted covariance given a UK
 - `m` : AbstractGaussianSSM type containing the parameters of the Unscented Kalman Filter model.
 - `sp` : SigmaPoints type containing the matrix of sigma vectors and their corresponding weights
 """
-function timeUpdate(m::AbstractGaussianSSM, sp::SigmaPoints, t::Int=1)
+function timeUpdate(m::AbstractGaussianSSM, sp::SigmaPoints, t::Real=0.0)
     L, M  = size(sp.χ)
     χ_x = zeros(L, M)
     x_pred = zeros(L)
@@ -174,7 +174,7 @@ function predict(m::AbstractGaussianSSM, x::AbstractMvNormal, filter::UKF)
     return pred_state, new_sigPoints
 end
 
-function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y, t::Int=1)
+function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y, t::Real=0.0)
     obsLength = length(y)
     L, M = size(sp.χ)
     y_trans = zeros(obsLength, M)
@@ -240,7 +240,7 @@ EnsembleKalmanFilter() = EnsembleKalmanFilter(100)
 
 
 function predict(m::AbstractGaussianSSM, ensemble::Matrix, filter::EnKF=EnKF();
-        u::Vector=zeros(m.nu), t::Int=1)
+        u::Vector=zeros(m.nu), t::Real=0.0)
     ensemble_new = similar(ensemble)
     CI = control_input(m, u, t)
     for i in 1:size(ensemble, 2)
@@ -251,7 +251,7 @@ function predict(m::AbstractGaussianSSM, ensemble::Matrix, filter::EnKF=EnKF();
 end
 
 function update(m::AbstractGaussianSSM, ensemble::Matrix, y::Vector,
-        filt::EnKF=EnKF(), t::Int=1)
+        filt::EnKF=EnKF(), t::Real=0.0)
     P = cov(ensemble')
     ensemble_updated = similar(ensemble)
     for i in 1:filt.nparticles
@@ -267,35 +267,44 @@ function update(m::AbstractGaussianSSM, ensemble::Matrix, y::Vector,
 end
 
 function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
-        filt::EnKF=EnKF(); u::Matrix{T}=zeros(m.nu, size(y, 2)), return_ensemble=false)
+        filt::EnKF=EnKF(); u::Matrix{T}=zeros(m.nu, size(y, 2)), 
+        times::Vector{T}=zeros(size(y, 2)), return_ensemble=false)
     nt = size(y, 2)
     ensemble = rand(x0, filt.nparticles)
-    ensemble = predict(m, ensemble, filt, u=u[:,1], t=1)
+    ensemble = predict(m, ensemble, filt, u=u[:,1], t=times[1])
     loglik = 0.0
     if return_ensemble
         x_filtered = zeros(m.nx, filt.nparticles, nt)
-        x_filtered[:, :, 1] = update(m, ensemble, y[:, 1], filt, 1)
+        x_filtered[:, :, 1] = update(m, ensemble, y[:, 1], filt, times[1])
         for i in 2:nt
-            ensemble = predict(m, x_filtered[:, :, i-1], filt, u=u[:, i], t=i)
-            x_filtered[:, :, i] = update(m, ensemble, y[:, i], filt, i)
+            ensemble = predict(m, x_filtered[:, :, i-1], filt, u=u[:, i], t=times[i])
+            x_filtered[:, :, i] = update(m, ensemble, y[:, i], filt, times[i])
         end
         return x_filtered
     else
         x_filtered = Array(AbstractMvNormal, size(y, 2))
-        ensemble = update(m, ensemble, y[:, 1], filt, 1)
+        ensemble = update(m, ensemble, y[:, 1], filt, times[1])
         x_filtered[1] = MvNormal(vec(mean(ensemble, 2)), cov(ensemble'))
         for j in 1:filt.nparticles
             loglik += logpdf(x_filtered[1], ensemble[:, j])
-            loglik += logpdf(observe(m, x_filtered[1]), y[:,1])
+        end
+        if ! any(isnan(y[:, 1]))
+            for j in 1:filt.nparticles
+                loglik += logpdf(observe(m, x_filtered[1], times[1]), y[:,1])
+            end
         end
         for i in 2:nt
-            ensemble = predict(m, ensemble, filt, u=u[:, i], t=i)
+            ensemble = predict(m, ensemble, filt, u=u[:, i], t=times[i])
             x_filtered[i] = MvNormal(vec(mean(ensemble, 2)), cov(ensemble'))
             for j in 1:filt.nparticles
                 loglik += logpdf(x_filtered[i], ensemble[:, j])
-                loglik += logpdf(observe(m, x_filtered[i]), y[:,1])
+            end
+            if ! any(isnan(y[:, i]))
+                for j in 1:filt.nparticles
+                    loglik += logpdf(observe(m, x_filtered[1], times[1]), y[:,i])
+                end
             end
         end
-        return FilteredState(y, x_filtered, loglik, false)
+        return FilteredState(y, x_filtered, u, times, loglik, false)
     end
 end

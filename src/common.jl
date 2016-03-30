@@ -9,7 +9,7 @@ Forecast the state of the process at the next time step.
 - MvNormal distribution representing the forecast and its associated uncertainty.
 """
 function predict(m::AbstractGaussianSSM, x::AbstractMvNormal;
-		u::Array=zeros(m.nu), t::Int=1)
+		u::Array=zeros(m.nu), t::Real=0.0)
     F = process_matrix(m, x, t)
     CI = control_input(m, u, t)
     return MvNormal(F * mean(x) + CI, F * cov(x) * F' + m.V(t))
@@ -27,7 +27,7 @@ Observe the state process with uncertainty.
 - MvNormal distribution, representing the probability of recording any
 particular observation data.
 """
-function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Int=1)
+function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
 	G = observation_matrix(m, x, t)
 	return MvNormal(G * mean(x), G * cov(x) * G' + m.W(t))
 end
@@ -53,15 +53,17 @@ t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
 filtering, run `smooth` on the FilteredState produced by this function.
 """
 function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
-		u::Array{T}, filter::AbstractKalmanFilter)
+		u::Array{T}, times::Vector{T}, filter::AbstractKalmanFilter)
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
 	loglik = 0.0
-	x_pred = predict(m, x0, u=u[:, 1], t=1)
+	x_pred = predict(m, x0, u=u[:, 1], t=times[1])
 	x_filtered[1] = update(m, x_pred, y[:, 1], filter, 1)
-	loglik = logpdf(x_filtered[1], mean(x_pred)) +
-		logpdf(observe(m, x_filtered[1]), y[:,1])
+	loglik = logpdf(x_filtered[1], mean(x_pred))
+	if ! any(isnan(y[:, 1]))
+		loglik += logpdf(observe(m, x_filtered[1]), y[:,1])
+	end
 	for i in 2:size(y, 2)
-		x_pred = predict(m, x_filtered[i-1], u=u[:, i], t=i)
+		x_pred = predict(m, x_filtered[i-1], u=u[:, i], t=times[i])
 		# Check for missing values in observation
 		if any(isnan(y[:, i]))
 			x_filtered[i] = x_pred
@@ -71,18 +73,20 @@ function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 		end
 		loglik += logpdf(x_pred, mean(x_filtered[i]))
 	end
-	return FilteredState(y, x_filtered, loglik, false)
+	return FilteredState(y, x_filtered, u, times, loglik, false)
 end
 
 
 function filter{T}(m::LinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
-		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::LinearKalmanFilter=KF())
-	return _filter(m, y, x0, u, filter)
+		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::LinearKalmanFilter=KF(),
+		times::Vector{T}=zeros(size(y, 2)))
+	return _filter(m, y, x0, u, times, filter)
 end
 
 function filter{T}(m::NonlinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
-		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::NonlinearKalmanFilter=EKF())
-	return _filter(m, y, x0, u, filter)
+		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::NonlinearKalmanFilter=EKF(),
+		times::Vector{T}=zeros(size(y, 2)))
+	return _filter(m, y, x0, u, times, filter)
 end
 
 
@@ -100,22 +104,26 @@ function _smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	n = size(fs.observations, 2)
 	smooth_dist = Array(AbstractMvNormal, n)
 	smooth_dist[end] = fs.state[end]
-	loglik = logpdf(observe(m, smooth_dist[end]), fs.observations[:, end])
+	if ! any(isnan(fs.observations[:, 1]))
+		loglik = logpdf(observe(m, smooth_dist[end], fs.times[end]), 
+			fs.observations[:, end])
+	end
 	for i in (n - 1):-1:1
-		state_pred = predict(m, fs.state[i])
+		state_pred = predict(m, fs.state[i], u=fs.input[:, i], t=fs.times[i])
 		P = cov(fs.state[i])
-		F = process_matrix(m, fs.state[i])
+		F = process_matrix(m, fs.state[i], fs.times[i])
 		J = P * F' * inv(cov(state_pred))
 		x_smooth = mean(fs.state[i]) + J *
 			(mean(smooth_dist[i+1]) - mean(state_pred))
 		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
 		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
-		loglik += logpdf(predict(m, smooth_dist[i]), mean(smooth_dist[i+1]))
+		loglik += logpdf(predict(m, smooth_dist[i], u=fs.input[:, i], t=fs.times[i]), 
+			mean(smooth_dist[i+1]))
 		if ! any(isnan(fs.observations[:, i]))
-			loglik += logpdf(observe(m, smooth_dist[i]), fs.observations[:, i])
+			loglik += logpdf(observe(m, smooth_dist[i], fs.times[i]), fs.observations[:, i])
 		end
 	end
-	return FilteredState(fs.observations, smooth_dist, loglik, true)
+	return FilteredState(fs.observations, smooth_dist, fs.input, fs.times, loglik, true)
 end
 
 

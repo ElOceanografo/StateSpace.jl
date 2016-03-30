@@ -13,6 +13,8 @@ given the model and state estimates.
 type FilteredState{T, D<:ContinuousMultivariateDistribution}
 	observations::Array{T, 2}
 	state::Array{D}
+	input::Array{T, 2}
+	times::Vector{T}
 	loglik::T
 	smoothed::Bool
 end
