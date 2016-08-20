@@ -4,12 +4,14 @@ Forecast the state of the process at the next time step.
 #### Parameters
 - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
 - x : AbstractMvNormal.  Current state estimate.
-
+- u : Vector, optional.  External input.
+- t : Real, optional. Time supplied to the time-varying model matrices (if the
+	model is not time-varying, it will be ignored.)
 #### Returns
 - MvNormal distribution representing the forecast and its associated uncertainty.
 """
 function predict(m::AbstractGaussianSSM, x::AbstractMvNormal;
-		u::Array=zeros(m.nu), t::Real=0.0)
+		u::Vector=zeros(m.nu), t::Real=0.0)
     F = process_matrix(m, x, t)
     CI = control_input(m, u, t)
     return MvNormal(F * mean(x) + CI, F * cov(x) * F' + m.V(t))
@@ -22,7 +24,9 @@ Observe the state process with uncertainty.
 #### Parameters
 - m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
 - x : AbstractMvNormal.  Current state estimate.
-
+- u : Vector, optional.  External input.
+- t : Real, optional. Time supplied to the time-varying model matrices (if the
+model is not time-varying, it will be ignored.)
 #### Returns
 - MvNormal distribution, representing the probability of recording any
 particular observation data.
@@ -32,26 +36,6 @@ function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
 	return MvNormal(G * mean(x), G * cov(x) * G' + m.W(t))
 end
 
-"""
-Given a process/observation model and a set of data, estimate the states of the
-hidden process at each time step.
-
-#### Parameters
-- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
-- y : Array of data.  Each column is a set of observations at one time, while
-each row is one observed variable.  Can contain NaNs to represent missing data.
-- x0 : AbstractMvNorm. Multivariate normal distribution representing our estimate
-of the hidden state and our uncertainty about that estimate before our first observation.
-(i.e., if the first data arrives at t=1, this is where we think the process is at t=0.)
-
-#### Returns
-- A FilteredState object holding the estimates of the hidden state.
-
-#### Notes
-This function only does forward-pass filtering--that is, the state estimate at time
-t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
-filtering, run `smooth` on the FilteredState produced by this function.
-"""
 function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 		u::Array{T}, times::Vector{T}, filter::AbstractKalmanFilter)
 	x_filtered = Array(AbstractMvNormal, size(y, 2))
@@ -77,14 +61,36 @@ function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 end
 
 
+"""
+Given a process/observation model and a set of data, estimate the states of the
+hidden process at each time step.
+
+#### Parameters
+- m : AbstractGaussianSSM.  Model of the state evolution and observation processes.
+- y : Array of data.  Each column is a set of observations at one time, while
+each row is one observed variable.  Can contain NaNs to represent missing data.
+- x0 : AbstractMvNorm. Multivariate normal distribution representing our estimate
+of the hidden state and our uncertainty about that estimate before our first observation.
+(i.e., if the first data arrives at t=1, this is where we think the process is at t=0.)
+- u : Matrix, optional.  Array of external inputs.
+- t : Real, optional. Time supplied to the time-varying model matrices (if the
+model is not time-varying, it will be ignored.)
+#### Returns
+- A FilteredState object holding the estimates of the hidden state.
+
+#### Notes
+This function only does forward-pass filtering--that is, the state estimate at time
+t incorporates data from 1:t, but not from t+1:T.  For full forward-and-backward
+filtering, run `smooth` on the FilteredState produced by this function.
+"""
 function filter{T}(m::LinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
-		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::LinearKalmanFilter=KF(),
+		filter::LinearKalmanFilter=KF(), u::Matrix{T}=zeros(m.nu, size(y, 2)),
 		times::Vector{T}=zeros(size(y, 2)))
 	return _filter(m, y, x0, u, times, filter)
 end
 
 function filter{T}(m::NonlinearGaussianSSM, y::Array{T}, x0::AbstractMvNormal;
-		u::Matrix{T}=zeros(m.nu, size(y, 2)), filter::NonlinearKalmanFilter=EKF(),
+		filter::NonlinearKalmanFilter=EKF(), u::Matrix{T}=zeros(m.nu, size(y, 2)),
 		times::Vector{T}=zeros(size(y, 2)))
 	return _filter(m, y, x0, u, times, filter)
 end

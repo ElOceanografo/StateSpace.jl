@@ -116,12 +116,12 @@ end
 
 
 ## Core methods
-process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = jacobian(m.f, x)
+process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = ForwardDiff.jacobian(m.f, x)
 function process_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
     return process_matrix(m, mean(x), t)
 end
 
-observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = jacobian(m.g, x)
+observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = ForwardDiff.jacobian(m.g, x)
 function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0) 
     return process_matrix(m, mean(x), t)
 end
