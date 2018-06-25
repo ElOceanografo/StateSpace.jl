@@ -1,6 +1,6 @@
 The StateSpace.jl package is licensed under the MIT "Expat" License:
 
-> Copyright (c) 2014: Sam Urmy.
+> Copyright (c) 2014-2018: Sam Urmy, Jonny Brooks-Bartlett
 >
 > Permission is hereby granted, free of charge, to any person obtaining
 > a copy of this software and associated documentation files (the
