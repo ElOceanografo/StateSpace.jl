@@ -18,7 +18,7 @@ filt = ParticleFilter(4, 1000, () -> zeros(4))
 nt = 24
 srand(1234)
 xx = simulate(mod, nt, x0)
-yy = (bearing(xx) + randn(nt) * r)'
+yy = reshape(bearing(xx) + randn(nt) * r, 1, :)
 
 # using PyPlot
 # subplot(111, aspect="equal")

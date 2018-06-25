@@ -1,9 +1,9 @@
-abstract AbstractStateSpaceFilter
+abstract type AbstractStateSpaceFilter end
 
-abstract AbstractKalmanFilter <: AbstractStateSpaceFilter
-abstract LinearKalmanFilter <: AbstractKalmanFilter
-abstract NonlinearKalmanFilter <: AbstractKalmanFilter
-abstract NonlinearFilter <: AbstractStateSpaceFilter
+abstract type AbstractKalmanFilter <: AbstractStateSpaceFilter end
+abstract type LinearKalmanFilter <: AbstractKalmanFilter end
+abstract type NonlinearKalmanFilter <: AbstractKalmanFilter end
+abstract type NonlinearFilter <: AbstractStateSpaceFilter end
 
 # LinearGaussianSSM 	LinearKalmanFilter
 #
@@ -17,7 +17,7 @@ abstract NonlinearFilter <: AbstractStateSpaceFilter
 ######################################################################
 
 type KalmanFilter <: LinearKalmanFilter end
-typealias KF KalmanFilter
+const KF = KalmanFilter
 
 ## methods
 
@@ -28,7 +28,7 @@ function update_kalman(pred, y, G, W)
     innovation_cov = G * cov(pred) * G' + W
     K = cov(pred) * G' * inv(innovation_cov)
     mean_update = mean(pred) + K * innovation
-    cov_update = (eye(cov(pred)) - K * G) * cov(pred)
+    cov_update = Distributions.PDMat(cholfact(Hermitian((I - K * G) * cov(pred))))
     return MvNormal(mean_update, cov_update)
 end
 
@@ -37,12 +37,14 @@ function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector,
 	return update_kalman(pred, y, m.G(t), m.W(t))
 end
 
-function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector, t::Real=0.0)
+function update(m::LinearGaussianSSM, pred::AbstractMvNormal, y::Vector,
+        t::Real)
     return update(m, pred, y, KalmanFilter(), t)
 end
 
 function update!(m::LinearGaussianSSM, fs::FilteredState, y::Vector;
-		u::Vector=zeros(m.nu), filter::KalmanFilter=KalmanFilter(), t::Real=0.0)
+		u::Vector=zeros(m.nu), filter::KalmanFilter=KalmanFilter(),
+        t::Real=0.0)
 	x_pred = predict(m, fs.state[end], u=u, t=t)
 	x_filt = update_kalman(x_pred, y, m.G(t), m.W(t))
 	push!(fs.state, x_filt)
@@ -54,7 +56,7 @@ end
 # Extended Kalman filter
 ######################################################################
 type ExtendedKalmanFilter <: NonlinearKalmanFilter end
-typealias EKF ExtendedKalmanFilter
+const EKF = ExtendedKalmanFilter
 
 
 ## methods
@@ -82,12 +84,12 @@ end
 ######################################################################
 
 
-type UnscentedKalmanFilter{T<:Real} <: NonlinearKalmanFilter
+struct UnscentedKalmanFilter{T<:Real} <: NonlinearKalmanFilter
 	α::T
 	β::T
 	κ::T
 end
-typealias UKF UnscentedKalmanFilter
+const UKF = UnscentedKalmanFilter
 UnscentedKalmanFilter{T}(α::T=1e-3, β::T=2.0, κ::T=0.0) = UKF(α, β, κ)
 
 
@@ -134,7 +136,7 @@ function calcSigmaPoints{T}(state::AbstractMvNormal, α::T, β::T, κ::T)
     wc[1] = wm[1] + (1 - α^2 + β)
     wm[2:end] = 1/(2*(L+λ))
     wc[2:end] = wm[2:end]
-    sp = sqrt(L+λ)*full(chol(p))
+    sp = sqrt.(L+λ)*full(chol(p))
     for i = 2:L+1
         χ[:,i] = x + sp[:,i-1]
         χ[:,i+L] = x - sp[:,i-1]
@@ -207,8 +209,8 @@ function update(m::AbstractGaussianSSM, x::AbstractMvNormal, sp::SigmaPoints, y:
     return innovate(m, x, yPred, P_xy, sp, y)
 end
 
-function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
-	filter::UKF=UKF())
+function filter(m::AbstractGaussianSSM, y::Array, x0::AbstractMvNormal,
+	filter::UKF)
     x_filtered = Array(AbstractMvNormal, size(y, 2))
     loglik = 0.0
 	x_pred, sigma_points = predict(m, x0, filter)
@@ -232,10 +234,10 @@ end
 ######################################################################
 
 
-type EnsembleKalmanFilter{I<:Integer} <: NonlinearFilter
+struct EnsembleKalmanFilter{I<:Integer} <: NonlinearFilter
     nparticles::I
 end
-typealias EnKF EnsembleKalmanFilter
+const EnKF = EnsembleKalmanFilter
 EnsembleKalmanFilter() = EnsembleKalmanFilter(100)
 
 
@@ -267,7 +269,7 @@ function update(m::AbstractGaussianSSM, ensemble::Matrix, y::Vector,
 end
 
 function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
-        filt::EnKF=EnKF(); u::Matrix{T}=zeros(m.nu, size(y, 2)), 
+        filt::EnKF=EnKF(); u::Matrix{T}=zeros(m.nu, size(y, 2)),
         times::Vector{T}=zeros(size(y, 2)), return_ensemble=false)
     nt = size(y, 2)
     ensemble = rand(x0, filt.nparticles)
@@ -282,13 +284,13 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
         end
         return x_filtered
     else
-        x_filtered = Array(AbstractMvNormal, size(y, 2))
+        x_filtered = Array{AbstractMvNormal}(size(y, 2))
         ensemble = update(m, ensemble, y[:, 1], filt, times[1])
         x_filtered[1] = MvNormal(vec(mean(ensemble, 2)), cov(ensemble'))
         for j in 1:filt.nparticles
             loglik += logpdf(x_filtered[1], ensemble[:, j])
         end
-        if ! any(isnan(y[:, 1]))
+        if ! any(isnan.(y[:, 1]))
             for j in 1:filt.nparticles
                 loglik += logpdf(observe(m, x_filtered[1], times[1]), y[:,1])
             end
@@ -299,7 +301,7 @@ function filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
             for j in 1:filt.nparticles
                 loglik += logpdf(x_filtered[i], ensemble[:, j])
             end
-            if ! any(isnan(y[:, i]))
+            if ! any(isnan.(y[:, i]))
                 for j in 1:filt.nparticles
                     loglik += logpdf(observe(m, x_filtered[1], times[1]), y[:,i])
                 end

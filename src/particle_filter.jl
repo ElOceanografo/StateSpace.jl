@@ -94,8 +94,8 @@ end
 function update(m::NonlinearSSM, pred::Matrix, y::Vector, filter::ParticleFilter,
 		t::Int=1)
 	n = filter.nparticles
-	likelihoods = exp(observe(m, pred, y, t))
-	weights = StatsBase.WeightVec(likelihoods / sum(likelihoods))
+	likelihoods = exp.(observe(m, pred, y, t))
+	weights = StatsBase.Weights(likelihoods / sum(likelihoods))
 	indices = sample(1:n, weights, n)
 	return pred[:, indices] + jitter(filter)
 end
@@ -111,8 +111,8 @@ function update!(m::NonlinearSSM, pred::Matrix, y::Vector, filter::ParticleFilte
 end
 
 
-function filter{T}(m::NonlinearSSM, y::Matrix{T}, x0::Matrix{T},
-		f::ParticleFilter, u::Matrix{T}=zeros(m.nu, size(y, 2)))
+function filter(m::NonlinearSSM, y::Matrix, x0::Matrix,
+		f::ParticleFilter, u::Matrix=zeros(m.nu, size(y, 2)))
 	@assert size(x0, 1) == m.nx == f.nx
 	@assert size(x0, 2) == f.nparticles
 	@assert size(u, 1) == m.nu

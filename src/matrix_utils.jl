@@ -2,7 +2,7 @@
 # Methods for checking matrix sizes etc.
 
 issquare(x::Matrix) = size(x, 1) == size(x, 2)
-ispossemidef(x::Matrix) = issym(x) && (eigmin(x) >= 0)
+ispossemidef(x::Matrix) = issymmetric(x) && (eigmin(x) >= 0)
 
 
 function confirm_matrix_sizes(F, B, V, G, W)

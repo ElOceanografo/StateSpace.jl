@@ -1,6 +1,6 @@
-abstract AbstractStateSpaceModel
-typealias AbstractSSM AbstractStateSpaceModel
-abstract AbstractGaussianSSM <: AbstractStateSpaceModel
+abstract type AbstractStateSpaceModel end
+const AbstractSSM = AbstractStateSpaceModel
+abstract type AbstractGaussianSSM <: AbstractStateSpaceModel end
 
 # LinearGaussianSSM     LinearKalmanFilter
 #                       NonlinearKalmanFilter
@@ -13,10 +13,10 @@ abstract AbstractGaussianSSM <: AbstractStateSpaceModel
 
 
 ###########################################################################
-# Linear Gaussian 
+# Linear Gaussian
 ###########################################################################
 
-immutable LinearGaussianSSM <: AbstractGaussianSSM
+struct LinearGaussianSSM <: AbstractGaussianSSM
     # Process transition matrix, control matrix, and noise covariance
     F::Function
     B::Function
@@ -52,7 +52,7 @@ LinearGaussianSSM{T}(F::Matrix{T}, V::Matrix{T}, G::Matrix{T}, W::Matrix{T};
 	  LinearGaussianSSM(_->F, _->B, _->V, _->G, _->W)
 
 function show(io::IO, mod::LinearGaussianSSM)
-    dx, dy = mod.nx, mod.ny 
+    dx, dy = mod.nx, mod.ny
     println("LinearGaussianSSM, $dx-D process x $dy-D observations")
     println("Process evolution matrix F:")
     show(mod.F(1))
@@ -76,10 +76,10 @@ observation_matrix(m::LinearGaussianSSM, state::AbstractMvNormal, t::Real=0.0) =
 control_input(m::LinearGaussianSSM, u, t::Real=0.0) = m.B(t) * u
 
 ###########################################################################
-# Nonlinear Gaussian 
+# Nonlinear Gaussian
 ###########################################################################
 
-immutable NonlinearGaussianSSM <: AbstractGaussianSSM
+struct NonlinearGaussianSSM <: AbstractGaussianSSM
     # Process transition function, jacobian, and noise covariance matrix
     f::Function
     V::Function
@@ -87,7 +87,7 @@ immutable NonlinearGaussianSSM <: AbstractGaussianSSM
     # Control input function
     b::Function
 
-    # Observation function, 
+    # Observation function,
     g::Function # actual observation function
     W::Function
 
@@ -116,16 +116,14 @@ end
 
 
 ## Core methods
-process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = jacobian(m.f, x)
+process_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = ForwardDiff.jacobian(m.f, x)
 function process_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
     return process_matrix(m, mean(x), t)
 end
 
-observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = jacobian(m.g, x)
-function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0) 
+observation_matrix(m::NonlinearGaussianSSM, x::Vector, t::Real=0.0) = ForwardDiff.jacobian(m.g, x)
+function observation_matrix(m::NonlinearGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
     return process_matrix(m, mean(x), t)
 end
 
 control_input(m::NonlinearGaussianSSM, u, t::Real=0.0) = m.b(u)
-
-

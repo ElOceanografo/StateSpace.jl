@@ -12,7 +12,8 @@ function predict(m::AbstractGaussianSSM, x::AbstractMvNormal;
 		u::Array=zeros(m.nu), t::Real=0.0)
     F = process_matrix(m, x, t)
     CI = control_input(m, u, t)
-    return MvNormal(F * mean(x) + CI, F * cov(x) * F' + m.V(t))
+	Sigma = Distributions.PDMat(cholfact(Hermitian(F * cov(x) * F' + m.V(t))))
+    return MvNormal(F * mean(x) + CI, Sigma)
 end
 
 
@@ -29,7 +30,8 @@ particular observation data.
 """
 function observe(m::AbstractGaussianSSM, x::AbstractMvNormal, t::Real=0.0)
 	G = observation_matrix(m, x, t)
-	return MvNormal(G * mean(x), G * cov(x) * G' + m.W(t))
+	Sigma = Distributions.PDMat(cholfact(Hermitian(G * cov(x) * G' + m.W(t))))
+	return MvNormal(G * mean(x), Sigma)
 end
 
 """
@@ -54,18 +56,18 @@ filtering, run `smooth` on the FilteredState produced by this function.
 """
 function _filter{T}(m::AbstractGaussianSSM, y::Array{T}, x0::AbstractMvNormal,
 		u::Array{T}, times::Vector{T}, filter::AbstractKalmanFilter)
-	x_filtered = Array(AbstractMvNormal, size(y, 2))
+	x_filtered = Array{AbstractMvNormal}(size(y, 2))
 	loglik = 0.0
 	x_pred = predict(m, x0, u=u[:, 1], t=times[1])
 	x_filtered[1] = update(m, x_pred, y[:, 1], filter, 1)
 	loglik = logpdf(x_filtered[1], mean(x_pred))
-	if ! any(isnan(y[:, 1]))
+	if ! any(isnan.(y[:, 1]))
 		loglik += logpdf(observe(m, x_filtered[1]), y[:,1])
 	end
 	for i in 2:size(y, 2)
 		x_pred = predict(m, x_filtered[i-1], u=u[:, i], t=times[i])
 		# Check for missing values in observation
-		if any(isnan(y[:, i]))
+		if any(isnan.(y[:, i]))
 			x_filtered[i] = x_pred
 		else
 			x_filtered[i] = update(m, x_pred, y[:, i], filter, i)
@@ -102,10 +104,10 @@ passes at once.
 """
 function _smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 	n = size(fs.observations, 2)
-	smooth_dist = Array(AbstractMvNormal, n)
+	smooth_dist = Array{AbstractMvNormal}(n)
 	smooth_dist[end] = fs.state[end]
-	if ! any(isnan(fs.observations[:, 1]))
-		loglik = logpdf(observe(m, smooth_dist[end], fs.times[end]), 
+	if ! any(isnan.(fs.observations[:, 1]))
+		loglik = logpdf(observe(m, smooth_dist[end], fs.times[end]),
 			fs.observations[:, end])
 	end
 	for i in (n - 1):-1:1
@@ -116,10 +118,11 @@ function _smooth{T}(m::AbstractGaussianSSM, fs::FilteredState{T})
 		x_smooth = mean(fs.state[i]) + J *
 			(mean(smooth_dist[i+1]) - mean(state_pred))
 		P_smooth = P + J * (cov(smooth_dist[i+1]) - cov(state_pred)) * J'
+		P_smooth = Distributions.PDMat(cholfact(Hermitian(P_smooth)))
 		smooth_dist[i] = MvNormal(x_smooth, P_smooth)
-		loglik += logpdf(predict(m, smooth_dist[i], u=fs.input[:, i], t=fs.times[i]), 
+		loglik += logpdf(predict(m, smooth_dist[i], u=fs.input[:, i], t=fs.times[i]),
 			mean(smooth_dist[i+1]))
-		if ! any(isnan(fs.observations[:, i]))
+		if ! any(isnan.(fs.observations[:, i]))
 			loglik += logpdf(observe(m, smooth_dist[i], fs.times[i]), fs.observations[:, i])
 		end
 	end
